@@ -1,0 +1,10 @@
+const fs=require('fs'),ts=require('typescript'),vm=require('vm'),assert=require('node:assert/strict');const m={exports:{}};vm.runInThisContext('(function(module,exports){'+ts.transpileModule(fs.readFileSync('lib/order-state.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText+'})')(m,m.exports);const {transition:t}=m.exports;
+const base={status:'received',payment:'awaiting_payment',request_from:'',carrier:'',tracking:'',refund_ref:'',restock:0};
+assert.equal(t(base,'cancel',false,{}).status,'cancelled');
+assert.throws(()=>t(base,'confirm_payment',false,{confirmed:true}));assert.throws(()=>t(base,'confirm_payment',true,{}));
+let p=t(base,'confirm_payment',true,{confirmed:true});assert.equal(p.status,'preparing');assert.throws(()=>t(p,'ship',true,{}));
+let req=t(p,'cancel',false,{});assert.equal(req.status,'cancel_requested');assert.throws(()=>t(req,'ship',true,{carrier:'CJ',tracking:'123'}));assert.equal(t(req,'reject_request',true,{}).status,'preparing');
+let cancelled=t(req,'cancel',true,{});assert.equal(cancelled.payment,'refund_pending');assert.throws(()=>t(cancelled,'confirm_refund',true,{confirmed:true}));assert.throws(()=>t(cancelled,'ship',true,{carrier:'CJ',tracking:'123'}));
+let refunded=t(cancelled,'confirm_refund',true,{confirmed:true,refundRef:'BANK-REF'});assert.equal(refunded.payment,'refunded');assert.throws(()=>t(refunded,'confirm_refund',true,{confirmed:true,refundRef:'AGAIN'}));
+let shipped=t(p,'ship',true,{carrier:'CJ',tracking:'123'});assert.throws(()=>t(shipped,'cancel',true,{}));let ret=t(shipped,'return',false,{});ret=t(ret,'approve_return',true,{});assert.throws(()=>t(ret,'receive_return',true,{}));ret=t(ret,'receive_return',true,{confirmed:true,restock:false});assert.equal(ret.restock,0);assert.equal(ret.payment,'refund_pending');
+console.log('PASS: customer/admin state boundaries, shipment restrictions, cancellation/refund order, mandatory manual confirmations, return restock decision, duplicate refund rejection.');

@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1791786695639,
+      "tag": "0000_premium_arachne",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791870550018,
+      "tag": "0001_simple_harpoon",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791871394172,
+      "tag": "0002_bizarre_sersi",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+ALTER TABLE `shop_orders` ADD `action_token` text DEFAULT '' NOT NULL;

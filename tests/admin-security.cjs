@@ -1,0 +1,39 @@
+const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('node:assert/strict'),ts=require('typescript');
+let identity=null,owner=null,row=null,uploads=0;
+const env={OWNER_BOOTSTRAP_EMAIL:'owner@example.test',BUCKET:{put:async()=>{uploads++}},DB:{prepare(sql){let vals=[];return {bind(...v){vals=v;return this},async first(){if(sql.startsWith('SELECT user_id'))return owner?{user_id:owner}:null;if(sql.startsWith('SELECT data'))return row;if(sql.startsWith('UPDATE')){if(row.revision!==vals[3])return null;row={data:vals[0],revision:row.revision+1,updated_at:vals[1]};return {revision:row.revision}}throw Error(sql)},async run(){if(sql.startsWith('INSERT OR IGNORE INTO store_owner'))owner??=vals[1];else if(sql.startsWith('INSERT OR IGNORE INTO store_content'))row??={data:vals[1],revision:0,updated_at:vals[2]};else throw Error(sql)}}}}};
+const cache=new Map();function load(file){file=path.resolve(file);if(cache.has(file))return cache.get(file);const module={exports:{}};cache.set(file,module.exports);const source=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const req=id=>id==='cloudflare:workers'?{env}:id.endsWith('?raw')?fs.readFileSync(path.resolve(path.dirname(file),id.slice(0,-4)),'utf8'):id.includes('chatgpt-auth')?{getChatGPTUser:async()=>identity,chatGPTSignInPath:()=>'/signin-with-chatgpt?return_to=%2Fadmin'}:id.startsWith('.')?load(path.resolve(path.dirname(file),id+'.ts')):require(id);vm.runInThisContext('(function(require,module,exports){'+source+'\n})',{filename:file})(req,module,module.exports);cache.set(file,module.exports);return module.exports}
+(async()=>{const admin=load('lib/admin.ts'),api=load('app/api/admin/content/route.ts'),upload=load('app/api/admin/upload/route.ts'),{defaults,contentSchema}=load('lib/content.ts');
+assert.equal(await admin.isOwner(),false);
+identity={userId:'stranger',email:'other@example.test'};assert.equal(await admin.isOwner(),false);assert.equal(owner,null);
+identity={userId:'site-owner',email:'owner@example.test'};assert.equal(await admin.isOwner(),true);assert.equal(owner,'site-owner');
+identity={userId:'different-user',email:'owner@example.test'};assert.equal(await admin.isOwner(),false,'Pinned ID must override same email');
+const req=(body,origin='https://shop.test')=>new Request('https://shop.test/api/admin/content',{method:'PUT',headers:{origin,'content-type':'application/json'},body:JSON.stringify(body)});
+assert.equal((await api.PUT(req({content:defaults,revision:0}))).status,403);
+identity={userId:'site-owner',email:'owner@example.test'};
+assert.equal((await api.PUT(req({content:defaults,revision:0},'https://attacker.test'))).status,403);
+let r=await api.PUT(req({content:{...defaults,brand:'EDITED'},revision:0}));assert.equal(r.status,200);assert.equal((await r.json()).revision,1);assert.equal(JSON.parse(row.data).brand,'EDITED');
+assert.equal((await api.PUT(req({content:defaults,revision:0}))).status,409,'Stale save must not overwrite');assert.equal(JSON.parse(row.data).brand,'EDITED');
+assert.equal((await api.PUT(req({content:{...defaults,heroImages:['javascript:alert(1)']},revision:1}))).status,400);
+assert.equal(contentSchema.safeParse({...defaults,products:[defaults.products[0],defaults.products[0]]}).success,false);
+r=await upload.POST(new Request('https://shop.test/api/admin/upload',{method:'POST',headers:{origin:'https://shop.test'},body:'<script>bad</script>'}));assert.equal(r.status,400);assert.equal(uploads,0);
+identity=null;assert.equal((await api.GET()).status,403);
+const page=load('app/admin/route.ts'),publicApi=load('app/api/content/route.ts');
+const pageReq=new Request('https://shop.test/admin');
+const uploadReq=body=>new Request('https://shop.test/api/admin/upload',{method:'POST',headers:{origin:'https://shop.test'},body});
+for(const visitor of [null,{userId:'stranger',email:'other@example.test'}]){
+ identity=visitor;assert.equal((await page.GET(pageReq)).status,visitor?403:302);
+ assert.equal((await api.GET()).status,403);assert.equal((await api.PUT(req({content:defaults,revision:1}))).status,403);
+ assert.equal((await upload.POST(uploadReq('bad'))).status,403);
+}
+identity={userId:'site-owner',email:'owner@example.test'};assert.equal((await page.GET(pageReq)).status,200);
+const edited=structuredClone(defaults);edited.products.reverse();edited.products[0].name='Edited product';edited.products[0].visible=false;edited.products.push({...edited.products[1],id:'temporary-test',name:'New product',visible:false});
+r=await api.PUT(req({content:edited,revision:1}));assert.equal(r.status,200);
+const saved=(await (await api.GET()).json()).content;assert.deepEqual(saved,edited);
+const visible=(await (await publicApi.GET()).json()).content.products;assert.deepEqual(visible,edited.products.filter(p=>p.visible));
+const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=','base64');
+r=await upload.POST(uploadReq(png));assert.equal(r.status,200);assert.match((await r.json()).url,/^\/media\/.+\.png$/);assert.equal(uploads,1);
+assert.equal((await upload.POST(uploadReq(new Uint8Array(8*1024*1024+1)))).status,400);assert.equal(uploads,1);
+env.BUCKET.put=async()=>{throw Error('Simulated storage failure')};r=await upload.POST(uploadReq(png));assert.equal(r.status,400);assert.match((await r.json()).error,/Simulated storage failure/);
+console.log('PASS: page and upload authorization, product edit/order/hide/add readback, public hidden-product filtering, valid upload, oversized upload and storage failure;');
+console.log('PASS: owner bootstrap and pinned ID, missing/other identity denial, cross-origin denial, save/read persistence, stale-write rejection, safe image paths, duplicate IDs, invalid image rejection.');
+})().catch(e=>{console.error(e);process.exit(1)});

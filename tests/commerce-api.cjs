@@ -1,0 +1,30 @@
+const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript'),assert=require('node:assert/strict');const {DatabaseSync}=require('node:sqlite');const db=new DatabaseSync(':memory:');for(const f of ['drizzle/0000_premium_arachne.sql','drizzle/0001_simple_harpoon.sql','drizzle/0002_bizarre_sersi.sql'])db.exec(fs.readFileSync(f,'utf8'));
+let identity=null;const env={OWNER_BOOTSTRAP_EMAIL:'owner@test',DB:{async batch(stmts){db.exec('BEGIN IMMEDIATE');try{const results=stmts.map(s=>s.exec());db.exec('COMMIT');return results}catch(e){db.exec('ROLLBACK');throw e}},prepare(sql){let params=[];return {exec(){const r=db.prepare(sql).run(...params);return {meta:{changes:Number(r.changes)}}},bind(...p){params=p;return this},async first(){return db.prepare(sql).get(...params)||null},async all(){return {results:db.prepare(sql).all(...params)}},async run(){return db.prepare(sql).run(...params)}}}}};const cache=new Map();function load(file){file=path.resolve(file);if(cache.has(file))return cache.get(file);const m={exports:{}};cache.set(file,m.exports);const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const req=id=>id==='cloudflare:workers'?{env}:id.includes('chatgpt-auth')?{getChatGPTUser:async()=>identity}:id.startsWith('.')?load(path.resolve(path.dirname(file),id+'.ts')):require(id);vm.runInThisContext('(function(require,module,exports){'+code+'})',{filename:file})(req,m,m.exports);cache.set(file,m.exports);return m.exports}
+const c=load('lib/commerce.ts');const req=(b)=>new Request('https://shop.test/api/shop',{method:'POST',headers:{origin:'https://shop.test','content-type':'application/json'},body:JSON.stringify(b)});const get=(p='')=>new Request('https://shop.test/api/shop'+p);const owner={userId:'owner',email:'owner@test'};const alice={userId:'alice',email:'alice@test'};const bob={userId:'bob',email:'bob@test'};
+(async()=>{
+assert.equal((await c.adminGet(get())).status,403);identity=owner;
+let r=await c.adminPost(req({action:'settings',revision:0,settings:{accepting:true,shippingFee:3000,bankInfo:'Test bank',support:'Test support',terms:'Test terms',privacy:'Test privacy',returnGuide:'Test returns'}}));assert.equal(r.status,200,await r.text());
+r=await c.adminPost(req({action:'stock',id:'jacket',size:'M',stock:2,maxOrder:1,enabled:true,revision:0}));assert.equal(r.status,200);
+identity=alice;assert.equal((await c.adminPost(req({action:'stock'}))).status,403);
+await c.shopPost(req({action:'register',name:'Alice',phone:'01000000000',consent:true,revision:1}));
+const draft={action:'create',requestKey:crypto.randomUUID(),expectedTotal:132000,settingsRevision:1,consent:true,items:[{id:'jacket',size:'M',qty:1}],address:{name:'Alice',phone:'01000000000',postcode:'01234',line1:'Test address street',line2:'Room 1',memo:''}};
+assert.equal((await c.shopPost(req({...draft,expectedTotal:1}))).status,400);
+assert.equal((await c.shopPost(req({...draft,items:[{id:'jacket',size:'M',qty:2}],expectedTotal:261000}))).status,409);
+r=await c.shopPost(req(draft));assert.equal(r.status,201);const order=(await r.json()).order;
+r=await c.shopPost(req(draft));assert.equal(r.status,200);assert.equal((await r.json()).order.id,order.id);assert.equal(db.prepare('SELECT stock FROM shop_inventory').get().stock,1);
+identity=bob;r=await c.shopGet(get());assert.equal((await r.json()).orders.length,0);assert.equal((await c.shopPost(req({action:'cancel',id:order.id,revision:0,note:'wrong user'}))).status,404);
+identity=alice;r=await c.shopGet(get());assert.equal((await r.json()).orders.length,1);
+identity=owner;r=await c.adminPost(req({action:'confirm_payment',id:order.id,revision:0,note:'bank verified',confirmed:true}));assert.equal(r.status,200);
+identity=alice;r=await c.shopPost(req({action:'cancel',id:order.id,revision:1,note:'changed mind'}));assert.equal(r.status,200);
+identity=owner;r=await c.adminPost(req({action:'cancel',id:order.id,revision:2,note:'approved'}));assert.equal(r.status,200);assert.equal(db.prepare('SELECT stock FROM shop_inventory').get().stock,2);
+r=await c.adminPost(req({action:'confirm_refund',id:order.id,revision:3,note:'refund done',confirmed:true,refundRef:'BANK-TEST'}));assert.equal(r.status,200);assert.equal(db.prepare('SELECT stock FROM shop_inventory').get().stock,2);assert.equal(db.prepare('SELECT payment FROM shop_orders').get().payment,'refunded');
+// Concurrent checkouts must serialize stock changes in a single database transaction.
+identity=owner;await c.adminPost(req({action:'stock',id:'jacket',size:'M',stock:1,maxOrder:1,enabled:true,revision:db.prepare('SELECT revision FROM shop_inventory').get().revision}));identity=alice;const attempts=await Promise.all([c.shopPost(req({...draft,requestKey:crypto.randomUUID()})),c.shopPost(req({...draft,requestKey:crypto.randomUUID()}))]);assert.deepEqual(attempts.map(x=>x.status).sort(),[201,409]);assert.equal(db.prepare('SELECT stock FROM shop_inventory').get().stock,0);
+// A later batch failure rolls back the order and stock writes together.
+identity=owner;await c.adminPost(req({action:'stock',id:'jacket',size:'M',stock:1,maxOrder:1,enabled:true,revision:db.prepare('SELECT revision FROM shop_inventory').get().revision}));identity=alice;
+const before=db.prepare('SELECT count(*) AS n FROM shop_orders').get().n;
+db.exec("CREATE TRIGGER test_fail_audit BEFORE INSERT ON shop_events BEGIN SELECT RAISE(ABORT,'test audit failure'); END;");
+assert.equal((await c.shopPost(req({...draft,requestKey:crypto.randomUUID()}))).status,400);
+assert.equal(db.prepare('SELECT stock FROM shop_inventory').get().stock,1);assert.equal(db.prepare('SELECT count(*) AS n FROM shop_orders').get().n,before);db.exec('DROP TRIGGER test_fail_audit');
+console.log('PASS: real SQL-backed API signup, owner-only management, server price/quantity validation, order idempotency, cross-customer privacy and mutation denial, payment/cancel/refund flow, exact stock restoration.');db.close();
+})().catch(e=>{console.error(e);process.exit(1)});
