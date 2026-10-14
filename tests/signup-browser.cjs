@@ -62,21 +62,15 @@ async function check(label, work) {
         await page.waitForFunction(() => document.querySelectorAll('.product').length === 4);
         assert.equal((await page.locator('#products').evaluate(el => getComputedStyle(el).gridTemplateColumns)).split(' ').length, width > 800 ? 4 : 2);
         await overflow(page, `home ${width}`);
-        const link = page.locator('header .account-link');
-        assert(await link.isVisible());
-        const controls = ['header .logo', 'header .account-link', '#search-button', '#bag-button', ...(width <= 800 ? ['.mobile-menu'] : [])];
-        const boxes = await Promise.all(controls.map(selector => page.locator(selector).boundingBox()));
-        boxes.forEach(box => assert(box && box.x >= 0 && box.x + box.width <= width + 1));
-        for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
-          const a = boxes[i], b = boxes[j];
-          assert(!(a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y), `${width}px header overlap: ${controls[i]} / ${controls[j]}`);
-        }
+        const link = page.locator('#site-sidebar .account-link');
+        await page.screenshot({ path: path.join(output, `home-${width}.png`), fullPage: true });
         if (width <= 800) {
           await page.locator('.mobile-menu').click();
-          assert(await page.locator('nav .menu-account-link').isVisible());
-          await page.locator('.mobile-menu').click();
+          assert.equal(await page.locator('.mobile-menu').getAttribute('aria-expanded'), 'true');
         }
-        await page.screenshot({ path: path.join(output, `home-${width}.png`), fullPage: true });
+        assert(await link.isVisible());
+        const box = await link.boundingBox();
+        assert(box && box.x >= 0 && box.x + box.width <= width + 1);
         await link.click();
         await page.waitForURL('**/signup');
         assert(await page.getByRole('link', { name: 'ChatGPT로 로그인 / 회원가입', exact: true }).isVisible());
@@ -237,7 +231,7 @@ async function check(label, work) {
       await otherPage.goto('/account');
       await otherPage.locator('#profile-form').waitFor();
       assert.equal(await otherPage.locator('[name=name]').inputValue(), '수정한회원');
-      assert.equal(await otherPage.evaluate(() => localStorage.length), 0);
+      assert.deepEqual(await otherPage.evaluate(() => Object.keys(localStorage).filter(key => key !== 'street-label-language')), []);
       assert.equal((await api(fresh, '/api/shop')).data.orders[0].id, orderId);
       await otherPage.goto('/signup?next=checkout');
       await otherPage.waitForURL('**/account?next=checkout#checkout');

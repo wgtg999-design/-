@@ -3,6 +3,7 @@
 .account-page,.signup-page{background:#fafafa;color:#171717;font-family:Arial,"Noto Sans KR",sans-serif}
 .account-page header,.signup-page header{background:#fff;color:#171717;border-bottom:1px solid #dedede;gap:20px}
 .account-page header nav,.signup-page header nav{align-items:center;flex-wrap:wrap}
+.account-page header>[data-store-brand],.signup-page header>[data-store-brand]{overflow-wrap:anywhere;max-width:380px}
 .account-page main{max-width:900px}
 .account-page.joining main,.signup-page main{max-width:660px}
 .account-page h1,.signup-page h1{letter-spacing:-1px;margin:16px 0 24px}
@@ -23,11 +24,17 @@
 .account-page .text-link,.signup-page .text-link{font-size:12px;line-height:1.8;display:inline-flex;align-items:center;min-height:42px;text-decoration:underline;text-underline-offset:3px}
 .account-page .actions{align-items:center}
 .account-page .actions button{min-height:44px}
+.account-page .language-control,.signup-page .language-control{display:flex;flex-direction:row;align-items:center;gap:9px;margin:0;font-size:11px;white-space:nowrap}
+.account-page .language-control select,.signup-page .language-control select{width:auto;min-height:40px;padding:8px 10px;font-size:12px;max-width:155px;border-color:#bcbcbc;border-radius:0}
+.account-page .original-notice{font-size:11px;line-height:1.8;color:#666;margin:6px 0 12px}
 .account-page [hidden],.signup-page [hidden]{display:none!important}
 .account-page :is(button,a,input,textarea,summary):focus-visible,.signup-page a:focus-visible{outline:2px solid #171717;outline-offset:4px}
 @media(max-width:650px){
   .account-page header,.signup-page header{padding:18px 16px;align-items:flex-start;gap:16px;flex-wrap:wrap}
   .account-page header nav,.signup-page header nav{gap:8px 16px;font-size:11px}
+  .account-page header nav{order:3;flex-basis:100%;width:100%}
+  .account-page .language-control,.signup-page .language-control{margin-left:auto}
+  .account-page .language-control>span,.signup-page .language-control>span{position:absolute;clip:rect(0,0,0,0);width:1px;height:1px;overflow:hidden}
   .account-page main,.signup-page main{padding:30px 16px 60px}
   .account-page h1,.signup-page h1{font-size:27px}
   .account-page section,.signup-page section{padding:22px 18px;margin:22px 0}

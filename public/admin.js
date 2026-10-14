@@ -1,14 +1,172 @@
-const $=s=>document.querySelector(s),esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let content,revision=0,dirty=false,busy=false;const status=(s,error=false)=>{$('#status').textContent=s;$('#status').classList.toggle('error',error)};
+const $=selector=>document.querySelector(selector);
+const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const locales=[['ko','한국어'],['zh-CN','简体中文 · 중국어 간체'],['zh-TW','繁體中文 · 중국어 번체'],['ja','日本語 · 일본어']];
+const brandFields=[['notice','상단 안내 문구',120],['aboutTitle','소개 제목',100],['aboutText','소개 문구',500]];
+const productFields=[['name','상품명',100],['color','색상',50],['description','상품 설명',2000],['sizeGuide','실측·사이즈 안내',4000]];
+const productLocales=new Map();
+let content,revision=0,dirty=false,busy=false,brandLocale='zh-CN';
+const status=(message,error=false)=>{$('#status').textContent=message;$('#status').classList.toggle('error',error)};
 function mark(){dirty=true;$('#save-state').textContent='저장하지 않은 변경사항';$('#save').disabled=busy}
-function busyState(value){busy=value;document.querySelectorAll('button,input,textarea,select').forEach(el=>el.disabled=value);$('#save').disabled=value||!dirty||!content;$('#add-product').disabled=value||!content;document.querySelectorAll('[data-action]').forEach(el=>{const a=el.dataset.action,i=Number(el.dataset.index),list=a.startsWith('hero')?content?.heroImages:content?.products;if(!list)return;el.disabled=value||(a.endsWith('up')&&i===0)||(a.endsWith('down')&&i===list.length-1)})}
-async function api(path,opts){const r=await fetch(path,{cache:'no-store',...opts});let data;try{data=await r.json()}catch{throw Error('서버 응답을 읽지 못했습니다. 로그인 상태와 연결을 확인하고 다시 시도해 주세요.')}if(!r.ok)throw Error(data.error||'요청에 실패했습니다.');return data}
-async function load(){busyState(true);try{const d=await api('/api/admin/content');content=d.content;revision=d.revision;dirty=false;render();$('#editor').hidden=false;status('대표님 전용 관리자입니다. 저장 전 변경은 홈페이지에 반영되지 않습니다.');$('#save-state').textContent=d.updatedAt?'마지막 저장 '+new Date(d.updatedAt).toLocaleString('ko-KR'):'첫 편집을 시작하세요';}catch(e){status(e.message,true)}finally{busyState(false)}}
-function visual(src,index,type){return `<div class="visual-card"><img src="${esc(src)}" alt="${type==='hero'?'메인':'저널'} 사진 ${index+1}"><div class="visual-actions"><label class="button">사진 교체<input hidden type="file" accept="image/jpeg,image/png,image/webp" data-upload="${type}" data-index="${index}"></label>${type==='hero'?`<button data-action="hero-up" data-index="${index}" ${index===0?'disabled':''}>← 앞쪽</button><button data-action="hero-down" data-index="${index}" ${index===content.heroImages.length-1?'disabled':''}>뒤쪽 →</button><button data-action="hero-remove" data-index="${index}">제거</button>`:''}</div></div>`}
-function render(){document.querySelectorAll('[data-field]').forEach(el=>el.value=content[el.dataset.field]);$('#heroes').innerHTML=content.heroImages.map((src,i)=>visual(src,i,'hero')).join('');$('#journal').innerHTML=visual(content.journalImage,0,'journal');$('#product-editor').innerHTML=content.products.length?content.products.map((p,i)=>`<article class="product-card"><div class="product-photo"><div class="photo ${p.image==='/assets/products.png'?'sheet '+p.crop:''}" style="background-image:url('${esc(p.image)}')" role="img" aria-label="상품 사진"></div><div class="visual-actions"><label class="button">사진 교체<input type="file" hidden accept="image/jpeg,image/png,image/webp" data-upload="product" data-index="${i}"></label></div></div><div class="product-fields"><label>상품명<input data-product="${i}" data-key="name" value="${esc(p.name)}" maxlength="100"></label><label>가격 (원)<input type="number" min="0" max="100000000" step="1" data-product="${i}" data-key="price" value="${p.price}"></label><label>색상<input data-product="${i}" data-key="color" value="${esc(p.color)}" maxlength="50"></label><label>분류<select data-product="${i}" data-key="category">${['OUTER','BOTTOMS','TOPS','ACC'].map(c=>`<option ${c===p.category?'selected':''}>${c}</option>`).join('')}</select></label><label class="wide">사이즈 (쉼표로 구분)<input data-product="${i}" data-key="sizes" value="${esc(p.sizes.join(', '))}" placeholder="S, M, L"></label><label class="wide">상품 설명<textarea rows="3" maxlength="2000" data-product="${i}" data-key="description">${esc(p.description)}</textarea></label><div class="card-actions"><label><input type="checkbox" data-product="${i}" data-key="visible" ${p.visible?'checked':''}>홈페이지에 표시</label><button data-action="up" data-index="${i}">↑ 위로</button><button data-action="down" data-index="${i}">↓ 아래로</button><button class="danger" data-action="remove" data-index="${i}">상품 삭제</button></div></div></article>`).join(''):'<p class="empty">등록된 상품이 없습니다. 상품 추가를 눌러 주세요.</p>';}
-document.addEventListener('input',e=>{const el=e.target;if(el.dataset.field){content[el.dataset.field]=el.value;mark()}if(el.dataset.product!==undefined){const p=content.products[Number(el.dataset.product)],key=el.dataset.key;p[key]=key==='price'?Number(el.value):key==='visible'?el.checked:key==='sizes'?el.value.split(',').map(s=>s.trim()).filter(Boolean):el.value;mark()}});
-document.addEventListener('click',e=>{const b=e.target.closest('[data-action]');if(!b||busy)return;const i=Number(b.dataset.index),a=b.dataset.action;if(a==='remove'){if(!confirm('이 상품을 목록에서 삭제할까요? 저장해야 반영됩니다.'))return;content.products.splice(i,1)}else if(a==='hero-remove'){if(content.heroImages.length===1){status('메인 사진은 최소 1장이 필요합니다.',true);return}content.heroImages.splice(i,1)}else{const list=a.startsWith('hero')?content.heroImages:content.products;const j=i+(a.endsWith('up')?-1:1);if(j<0||j>=list.length)return;[list[i],list[j]]=[list[j],list[i]]}mark();render()});
-document.addEventListener('change',async e=>{const el=e.target;if(!el.dataset.upload||!el.files?.[0])return;const file=el.files[0];el.value='';const type=el.dataset.upload,i=el.dataset.index===undefined?null:Number(el.dataset.index);if(file.size>8*1024*1024){status('사진은 8MB 이하로 올려주세요.',true);el.value='';return}if(type==='hero'&&i===null&&content.heroImages.length>=5){status('메인 사진은 최대 5장까지 등록할 수 있습니다.',true);return}busyState(true);status('사진을 업로드하고 있습니다…');try{const d=await api('/api/admin/upload',{method:'POST',headers:{'Content-Type':file.type},body:file});if(type==='hero'){if(i===null)content.heroImages.push(d.url);else content.heroImages[i]=d.url}else if(type==='journal')content.journalImage=d.url;else{content.products[i].image=d.url;content.products[i].crop=''}mark();render();status('사진 업로드 완료. 변경사항 저장을 누르면 홈페이지에 반영됩니다.')}catch(err){status(err.message,true)}finally{busyState(false)}});
-$('#add-product').onclick=()=>{if(content.products.length>=100){status('상품은 최대 100개까지 등록할 수 있습니다.',true);return}content.products.unshift({id:crypto.randomUUID(),name:'새 상품',price:0,color:'',category:'TOPS',sizes:['FREE'],description:'',image:'/assets/products.png',crop:'',visible:false});mark();render();$('#catalog').scrollIntoView()};
-$('#save').onclick=async()=>{busyState(true);status('변경사항을 저장하고 있습니다…');try{const d=await api('/api/admin/content',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content,revision})});revision=d.revision;dirty=false;$('#save-state').textContent='저장 완료 · '+new Date(d.updatedAt).toLocaleTimeString('ko-KR');status('저장했습니다. 홈페이지 보기에서 새로고침하면 변경 내용이 반영됩니다.')}catch(e){status(e.message,true)}finally{busyState(false)}};
-$('#reload').onclick=()=>{if(!dirty||confirm('저장하지 않은 편집 내용을 버리고 다시 불러올까요?'))load()};window.addEventListener('beforeunload',e=>{if(dirty||busy){e.preventDefault();e.returnValue=''}});load();
+function busyState(value){
+  busy=value;
+  document.querySelectorAll('button,input,textarea,select').forEach(element=>element.disabled=value);
+  $('#save').disabled=value||!dirty||!content;
+  $('#add-product').disabled=value||!content;
+  document.querySelectorAll('[data-action]').forEach(element=>{
+    const action=element.dataset.action,index=Number(element.dataset.index),list=action.startsWith('hero')?content?.heroImages:content?.products;
+    if(list)element.disabled=value||(action.endsWith('up')&&index===0)||(action.endsWith('down')&&index===list.length-1);
+  });
+}
+async function api(path,options){
+  const response=await fetch(path,{cache:'no-store',...options});
+  let data;
+  try{data=await response.json()}catch{throw Error('서버 응답을 읽지 못했습니다. 로그인 상태와 연결을 확인하고 다시 시도해 주세요.')}
+  if(!response.ok)throw Error(data.error||'요청에 실패했습니다.');
+  return data;
+}
+async function load(){
+  busyState(true);
+  try{
+    const data=await api('/api/admin/content');
+    content=data.content;revision=data.revision;dirty=false;
+    render();$('#editor').hidden=false;
+    status('대표님 전용 관리자입니다. 저장 전 변경은 홈페이지에 반영되지 않습니다.');
+    $('#save-state').textContent=data.updatedAt?'마지막 저장 '+new Date(data.updatedAt).toLocaleString('ko-KR'):'첫 편집을 시작하세요';
+  }catch(error){status(error.message,true)}finally{busyState(false)}
+}
+function visual(source,index,type){
+  return `<div class="visual-card"><img src="${esc(source)}" alt="${type==='hero'?'메인':'저널'} 사진 ${index+1}"><div class="visual-actions"><label class="button">사진 교체<input hidden type="file" accept="image/jpeg,image/png,image/webp" data-upload="${type}" data-index="${index}"></label>${type==='hero'?`<button data-action="hero-up" data-index="${index}" ${index===0?'disabled':''}>← 앞쪽</button><button data-action="hero-down" data-index="${index}" ${index===content.heroImages.length-1?'disabled':''}>뒤쪽 →</button><button data-action="hero-remove" data-index="${index}">제거</button>`:''}</div></div>`;
+}
+function localeOptions(selected){return locales.map(([locale,label])=>`<option value="${locale}" ${locale===selected?'selected':''}>${label}</option>`).join('')}
+function translatedFields(target,locale,fields,productIndex){
+  return fields.map(([key,label,maxlength])=>{
+    const multiline=['aboutText','description','sizeGuide'].includes(key);
+    const attributes=productIndex===undefined?`data-brand-translation="${key}"`:`data-product="${productIndex}" data-key="${key}"`;
+    const value=target.translations?.[locale]?.[key]??'';
+    return `<label class="${multiline?'wide':''}">${label} ${multiline?`<textarea rows="3" maxlength="${maxlength}" ${attributes} data-locale="${locale}">${esc(value)}</textarea>`:`<input maxlength="${maxlength}" ${attributes} data-locale="${locale}" value="${esc(value)}">`}</label>`;
+  }).join('');
+}
+function renderBrandTranslations(){
+  $('#brand-locale').value=brandLocale;
+  $('#brand-translations').innerHTML=translatedFields(content,brandLocale,brandFields);
+}
+function productLocale(product){return productLocales.get(product.id)||'zh-CN'}
+function productCard(product,index){
+  const locale=productLocale(product);
+  return `<article class="product-card"><div class="product-photo"><div class="photo ${product.image==='/assets/products.png'?'sheet '+product.crop:''}" style="background-image:url('${esc(product.image)}')" role="img" aria-label="상품 사진"></div><div class="visual-actions"><label class="button">사진 교체<input type="file" hidden accept="image/jpeg,image/png,image/webp" data-upload="product" data-index="${index}"></label></div></div><div class="product-fields">
+<label>상품명<input data-product="${index}" data-key="name" value="${esc(product.name)}" maxlength="100"></label>
+<label>가격 (원)<input type="number" min="0" max="100000000" step="1" data-product="${index}" data-key="price" value="${product.price}"></label>
+<label>색상<input data-product="${index}" data-key="color" value="${esc(product.color)}" maxlength="50"></label>
+<label>분류<select data-product="${index}" data-key="category">${['OUTER','BOTTOMS','TOPS','ACC'].map(category=>`<option ${category===product.category?'selected':''}>${category}</option>`).join('')}</select></label>
+<label class="wide">사이즈 (쉼표로 구분)<input data-product="${index}" data-key="sizes" value="${esc(product.sizes.join(', '))}" placeholder="S, M, L"></label>
+<label class="wide">상품 설명<textarea rows="3" maxlength="2000" data-product="${index}" data-key="description">${esc(product.description)}</textarea></label>
+<label class="wide">실측·사이즈 안내<textarea rows="4" maxlength="4000" data-product="${index}" data-key="sizeGuide" placeholder="실제 측정한 항목, 단위와 사이즈별 치수를 입력하세요.">${esc(product.sizeGuide)}</textarea></label>
+<p class="editor-help wide">실측 안내를 비워 두면 고객에게 ‘사이즈 안내 준비 중’으로 표시합니다. 측정하지 않은 수치는 임의로 넣지 마세요.</p>
+<div class="translation-editor wide"><div class="translation-heading"><h3>언어별 상품 정보</h3><label>편집할 언어<select data-product-locale="${index}">${localeOptions(locale)}</select></label></div><p class="editor-help">비워 둔 번역 항목은 기본 상품 정보를 사용합니다.</p><div class="fields" data-product-translations="${index}">${translatedFields(product,locale,productFields,index)}</div></div>
+<div class="card-actions"><label><input type="checkbox" data-product="${index}" data-key="visible" ${product.visible?'checked':''}>홈페이지에 표시</label><label><input type="checkbox" data-product="${index}" data-key="featured" ${product.featured===true?'checked':''}>BEST 운영자 추천</label><button data-action="up" data-index="${index}">↑ 위로</button><button data-action="down" data-index="${index}">↓ 아래로</button><button class="danger" data-action="remove" data-index="${index}">상품 삭제</button></div>
+</div></article>`;
+}
+function render(){
+  document.querySelectorAll('[data-field]').forEach(element=>element.value=content[element.dataset.field]);
+  document.querySelectorAll('[data-social]').forEach(element=>element.value=content.socialLinks?.[element.dataset.social]??'');
+  renderBrandTranslations();
+  $('#heroes').innerHTML=content.heroImages.map((source,index)=>visual(source,index,'hero')).join('');
+  $('#journal').innerHTML=visual(content.journalImage,0,'journal');
+  $('#product-editor').innerHTML=content.products.length?content.products.map(productCard).join(''):'<p class="empty">등록된 상품이 없습니다. 상품 추가를 눌러 주세요.</p>';
+  busyState(busy);
+}
+function setTranslation(target,locale,key,value,fields){
+  if(!locales.some(([code])=>code===locale)||!fields.some(([field])=>field===key))return false;
+  target.translations??={};target.translations[locale]??={};target.translations[locale][key]=value;
+  return true;
+}
+document.addEventListener('input',event=>{
+  if(!content||busy)return;
+  const element=event.target;
+  if(element.dataset.field){content[element.dataset.field]=element.value;mark();return}
+  if(element.dataset.social){
+    const key=element.dataset.social;
+    if(!['instagram','kakao'].includes(key))return;
+    content.socialLinks??={instagram:'',kakao:''};content.socialLinks[key]=element.value;mark();return;
+  }
+  if(element.dataset.brandTranslation){
+    if(setTranslation(content,element.dataset.locale,element.dataset.brandTranslation,element.value,brandFields))mark();
+    return;
+  }
+  if(element.dataset.product!==undefined){
+    const product=content.products[Number(element.dataset.product)],key=element.dataset.key;
+    if(!product)return;
+    if(element.dataset.locale){
+      if(setTranslation(product,element.dataset.locale,key,element.value,productFields))mark();
+      return;
+    }
+    product[key]=key==='price'?Number(element.value):['visible','featured'].includes(key)?element.checked:key==='sizes'?element.value.split(',').map(size=>size.trim()).filter(Boolean):element.value;
+    mark();
+  }
+});
+document.addEventListener('click',event=>{
+  const button=event.target.closest('[data-action]');
+  if(!button||busy||!content)return;
+  const index=Number(button.dataset.index),action=button.dataset.action;
+  if(action==='remove'){
+    if(!confirm('이 상품을 목록에서 삭제할까요? 저장해야 반영됩니다.'))return;
+    const [removed]=content.products.splice(index,1);if(removed)productLocales.delete(removed.id);
+  }else if(action==='hero-remove'){
+    if(content.heroImages.length===1){status('메인 사진은 최소 1장이 필요합니다.',true);return}
+    content.heroImages.splice(index,1);
+  }else{
+    const list=action.startsWith('hero')?content.heroImages:content.products,next=index+(action.endsWith('up')?-1:1);
+    if(next<0||next>=list.length)return;
+    [list[index],list[next]]=[list[next],list[index]];
+  }
+  mark();render();
+});
+document.addEventListener('change',async event=>{
+  const element=event.target;
+  if(!content||busy)return;
+  if(element.id==='brand-locale'){
+    if(locales.some(([code])=>code===element.value)){brandLocale=element.value;renderBrandTranslations();busyState(busy)}
+    return;
+  }
+  if(element.dataset.productLocale!==undefined){
+    const index=Number(element.dataset.productLocale),product=content.products[index];
+    if(product&&locales.some(([code])=>code===element.value)){
+      productLocales.set(product.id,element.value);
+      document.querySelector(`[data-product-translations="${index}"]`).innerHTML=translatedFields(product,element.value,productFields,index);
+      busyState(busy);
+    }
+    return;
+  }
+  if(!element.dataset.upload||!element.files?.[0])return;
+  const file=element.files[0];element.value='';
+  const type=element.dataset.upload,index=element.dataset.index===undefined?null:Number(element.dataset.index);
+  if(file.size>8*1024*1024){status('사진은 8MB 이하로 올려주세요.',true);return}
+  if(type==='hero'&&index===null&&content.heroImages.length>=5){status('메인 사진은 최대 5장까지 등록할 수 있습니다.',true);return}
+  busyState(true);status('사진을 업로드하고 있습니다…');
+  try{
+    const data=await api('/api/admin/upload',{method:'POST',headers:{'Content-Type':file.type},body:file});
+    if(type==='hero'){if(index===null)content.heroImages.push(data.url);else content.heroImages[index]=data.url}
+    else if(type==='journal')content.journalImage=data.url;
+    else{content.products[index].image=data.url;content.products[index].crop=''}
+    mark();render();status('사진 업로드 완료. 변경사항 저장을 누르면 홈페이지에 반영됩니다.');
+  }catch(error){status(error.message,true)}finally{busyState(false)}
+});
+$('#add-product').onclick=()=>{
+  if(busy||!content)return;
+  if(content.products.length>=100){status('상품은 최대 100개까지 등록할 수 있습니다.',true);return}
+  content.products.unshift({id:crypto.randomUUID(),name:'새 상품',price:0,color:'',category:'TOPS',sizes:['FREE'],description:'',image:'/assets/products.png',crop:'',visible:false});
+  mark();render();$('#catalog').scrollIntoView();
+};
+$('#save').onclick=async()=>{
+  if(busy||!content||!dirty)return;
+  busyState(true);status('변경사항을 저장하고 있습니다…');
+  try{
+    const data=await api('/api/admin/content',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content,revision})});
+    revision=data.revision;dirty=false;
+    $('#save-state').textContent='저장 완료 · '+new Date(data.updatedAt).toLocaleTimeString('ko-KR');
+    status('저장했습니다. 홈페이지 보기에서 새로고침하면 변경 내용이 반영됩니다.');
+  }catch(error){status(error.message,true)}finally{busyState(false)}
+};
+$('#reload').onclick=()=>{if(!busy&&(!dirty||confirm('저장하지 않은 편집 내용을 버리고 다시 불러올까요?')))load()};
+window.addEventListener('beforeunload',event=>{if(dirty||busy){event.preventDefault();event.returnValue=''}});
+load();

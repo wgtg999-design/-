@@ -34,6 +34,10 @@ function signinTarget(html){
   assert.ok(href,'The public entry must provide an explicit ChatGPT sign-in link');
   return new URL(href[1],'https://shop.test').searchParams.get('return_to');
 }
+function languageSelector(html){
+  assert.match(html,/select data-language-select/,'Customer pages must expose a native language selector');
+  for(const locale of ['ko','zh-CN','zh-TW','ja'])assert.ok(html.includes('<option value="'+locale+'">'),'Missing supported locale: '+locale);
+}
 
 (async()=>{
   const signup=load('app/signup/route.ts'),account=load('app/account/route.ts');
@@ -50,6 +54,8 @@ function signinTarget(html){
     assert.equal(r.headers.get('content-type'),'text/html; charset=utf-8');
     const html=await r.text();
     assert.match(html,/class="signup-page"/);
+    languageSelector(html);
+    assert.match(html,/script defer src="\/i18n.js"/);
     assert.match(html,/ChatGPT로 로그인 \/ 회원가입/);
     assert.equal(signinTarget(html),target);
     assert.doesNotMatch(html,/__SIGN_IN_URL__|src="\/account.js"/);
@@ -69,6 +75,7 @@ function signinTarget(html){
     assert.equal(r.status,200);uncached(r);
     const html=await r.text();
     assert.match(html,/class="account-page"/);
+    languageSelector(html);
     assert.match(html,/src="\/account.js"/);
     assert.doesNotMatch(html,/customer@example\.test|test-customer|__SIGN_IN_URL__/);
   }

@@ -3,26 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>회원가입 · 내 계정</title>
+  <title data-store-title="account.documentTitle">회원가입 · 내 계정</title>
   <link rel="stylesheet" href="/commerce.css">
   <script type="module" src="/account.js"></script>
 </head>
 <body class="account-page">
   <header>
-    <a href="/">YOUR LABEL</a>
-    <nav aria-label="계정 메뉴">
-      <a id="orders-link" href="#orders">내 주문</a>
-      <a href="/">쇼핑 계속하기</a>
-      <a href="/signout-with-chatgpt?return_to=%2F" target="_top">로그아웃</a>
+    <a id="account-brand" href="/" data-store-brand>YOUR LABEL</a>
+    <nav aria-label="계정 메뉴" data-i18n-aria-label="account.nav">
+      <a id="orders-link" href="#orders" data-i18n="account.orders">내 주문</a>
+      <a href="/" data-i18n="account.shop">쇼핑 계속하기</a>
+      <a href="/signout-with-chatgpt?return_to=%2F" target="_top" data-i18n="account.logout">로그아웃</a>
     </nav>
+    <label class="language-control"><span data-i18n="common.language">언어</span><select data-language-select aria-label="언어" data-i18n-aria-label="common.language"><option value="ko">한국어</option><option value="zh-CN">简体中文</option><option value="zh-TW">繁體中文</option><option value="ja">日本語</option></select></label>
   </header>
   <main id="page-main" aria-busy="true">
     <p class="eyebrow" id="page-eyebrow">MY ACCOUNT</p>
-    <h1 id="page-title">회원정보와 주문</h1>
-    <p id="status" role="status" aria-live="polite">회원정보를 불러오는 중…</p>
+    <h1 id="page-title" data-i18n="account.title">회원정보와 주문</h1>
+    <p id="status" role="status" aria-live="polite" data-i18n="account.loading">회원정보를 불러오는 중…</p>
     <div id="load-actions" class="actions" hidden>
-      <button id="load-retry" type="button">다시 불러오기</button>
-      <a id="load-login" class="text-link" href="/signup" hidden>ChatGPT로 다시 로그인</a>
+      <button id="load-retry" type="button" data-i18n="account.retry">다시 불러오기</button>
+      <a id="load-login" class="text-link" href="/signup" hidden data-i18n="auth.loginAgain">ChatGPT로 다시 로그인</a>
     </div>
     <section id="profile" aria-labelledby="profile-title"></section>
     <section id="checkout"></section>
@@ -31,10 +32,10 @@
   <dialog id="request-dialog">
     <form id="request-form">
       <h2 id="request-title"></h2>
-      <label>요청 사유<textarea id="reason" required maxlength="500"></textarea></label>
+      <label><span data-i18n="account.reason">요청 사유</span><textarea id="reason" required maxlength="500"></textarea></label>
       <div class="actions">
-        <button type="button" id="close-dialog">닫기</button>
-        <button class="primary">요청하기</button>
+        <button type="button" id="close-dialog" data-i18n="account.close">닫기</button>
+        <button class="primary" data-i18n="account.request">요청하기</button>
       </div>
       <p id="request-error" role="alert"></p>
     </form>

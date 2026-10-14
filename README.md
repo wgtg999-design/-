@@ -1,6 +1,23 @@
 # Street Label — storefront and owner CMS
 
-Vinext / Cloudflare Workers. D1 holds the catalog and pinned owner identity; R2 holds uploaded product and campaign images. The original storefront layout is preserved.
+Vinext / Cloudflare Workers. D1 holds the catalog and pinned owner identity; R2 holds uploaded product and campaign images. The storefront uses a fixed left menu on desktop and a compact header with a sliding menu on mobile.
+
+## 왼쪽 메뉴와 다국어 쇼핑몰
+
+참고 화면의 메뉴 구성을 반영했습니다. PC에는 브랜드 로고와 세로 메뉴를 왼쪽에 고정하고 오른쪽에 큰 화보와 상품을 배치했습니다. 모바일은 상단 로고·메뉴·장바구니와 열고 닫는 메뉴를 사용합니다. 기존 화보와 상품 사진을 유지하며 상품 목록은 PC 4열, 모바일 2열입니다. 참고 브랜드의 상표·로고·사진은 사용하지 않았습니다.
+
+- **언어**: 한국어, 중국어 간체, 중국어 번체, 일본어. 선택은 브라우저에 저장되며 홈페이지·가입·계정·주문 화면에 적용됩니다. 언어를 바꿔도 장바구니, 선택한 사이즈, 작성 중인 가입·주문 입력값이 유지됩니다. 가격은 모두 원화입니다.
+- **BEST ITEM**: 관리자가 추천 표시한 공개 상품만 노출합니다. 실제 판매 순위나 판매량을 만들지 않습니다.
+- **관심 상품**: 하트 버튼으로 저장·해제하고 메뉴에서 모아 봅니다. 현재 브라우저에만 저장하는 선호 목록이며 회원·주문 데이터는 D1에 저장합니다. 비공개로 바뀐 상품은 목록에서 제외합니다.
+- **사이즈 안내**: 관리자가 상품별 실측표를 입력할 수 있습니다. 미입력 상태에서는 측정 방법과 미등록 안내만 보여 주고 수치를 만들지 않습니다.
+- **COMMUNITY**: 공지와 쇼핑 FAQ를 읽는 화면입니다. 고객 게시글이나 실제 후기 기능은 포함하지 않습니다.
+- **SNS**: 인스타그램·카카오톡은 주소 미설정 시 ‘연결 준비 중’을 안내합니다. 관리자에서 실제 공식 HTTPS 주소를 저장하면 링크로 연결됩니다.
+
+`/admin`에서 브랜드명, SNS 주소, 네 언어의 안내·소개 문구와 상품명·색상·설명·실측표를 편집할 수 있습니다. 브랜드명은 홈페이지와 가입·계정 화면에 함께 반영됩니다. 번역 입력이 없으면 운영자 원문을 표시합니다. 실제 약관·개인정보·계좌·반품 안내는 임의로 번역하거나 새로 만들지 않습니다. 현지 고객에게 판매하기 전에 해당 언어의 실제 안내를 검토해야 합니다.
+
+현재 주문서는 국내 주소·우편번호 방식입니다. 언어 추가만으로 해외 배송을 개통하지 않습니다. 해외 판매에는 국가별 주소, 배송비, 통관 안내와 반품 조건을 별도로 정해야 합니다. 카드 결제도 결제사·사업자 연결 후 추가할 수 있습니다. 우선 실제 브랜드명·상품 사진·실측·재고와 운영 안내를 확정하는 것을 권합니다.
+
+네 언어 전체의 긴 설명·실측표를 상품 100개에 최대 길이로 입력하면 기존 저장 API의 400KB 요청 제한에 걸릴 수 있습니다. 큰 상품군으로 확대하기 전에 저장 방식과 용량을 검토하세요.
 
 ## 홈페이지 화면 바로 확인하기
 
@@ -64,7 +81,7 @@ Deployment compatibility: failed initial commerce migration was verified unappli
 
 ## 회원가입 동선
 
-홈페이지 상단·모바일 메뉴·하단의 **로그인 / 회원가입**에서 `/signup`으로 이동합니다. ChatGPT 로그인 후 처음 방문한 고객은 이름과 연락처를 입력하고 이용약관·개인정보 안내에 각각 동의합니다. 가입 중에는 중복 제출을 막고, 실패하면 입력 내용을 유지합니다. 가입 성공 화면에서 **내 계정으로 이동**을 선택하거나, 장바구니에서 시작했다면 **주문서 이어서 작성**을 선택합니다. 기존 회원은 바로 내 계정 또는 주문서로 연결됩니다.
+홈페이지 왼쪽 메뉴·모바일 메뉴·하단의 **로그인 / 회원가입**에서 `/signup`으로 이동합니다. ChatGPT 로그인 후 처음 방문한 고객은 이름과 연락처를 입력하고 이용약관·개인정보 안내에 각각 동의합니다. 가입 중에는 중복 제출을 막고, 실패하면 입력 내용을 유지합니다. 가입 성공 화면에서 **내 계정으로 이동**을 선택하거나, 장바구니에서 시작했다면 **주문서 이어서 작성**을 선택합니다. 기존 회원은 바로 내 계정 또는 주문서로 연결됩니다.
 
 회원정보와 주문은 로그인 신원에 연결해 D1에 저장합니다. 새로고침·다른 브라우저에서도 같은 ChatGPT 계정으로 로그인하면 조회할 수 있습니다. 일반 이메일·비밀번호 가입, 카카오·네이버 로그인은 구현되어 있지 않습니다.
 
@@ -86,6 +103,10 @@ node tests/order-state.cjs
 python3 tests/commerce-sql.py
 node tests/signup-security.cjs
 node tests/signup-routes.cjs
+node tests/customer-brand.cjs
+node tests/i18n.cjs
+node tests/catalog-locales.cjs
+node tests/public-stock.cjs
 pnpm exec tsc --noEmit --incremental false
 npm run build
 ```
@@ -115,9 +136,9 @@ CI=1 XDG_CONFIG_HOME="$PWD/.sites-runtime/browser-qa/xdg-config" SITES_RUNTIME_R
 CI=1 XDG_CONFIG_HOME="$PWD/.sites-runtime/browser-qa/xdg-config" SITES_RUNTIME_ROOT="$PWD/.sites-runtime/browser-qa" node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js dev --local --config .sites-runtime/browser-qa/wrangler.json --persist-to .sites-runtime/browser-qa/state --ip 127.0.0.1 --port 8791 --inspector-port 0
 ```
 
-다른 터미널에서 같은 저장소 루트로 이동한 뒤 `node tests/signup-browser.cjs`를 실행합니다. Playwright가 별도로 제공되는 환경이라면 해당 모듈이 Node에서 읽히도록 설정해야 합니다. 기본 Chromium 위치는 `/usr/bin/chromium`이며 `CHROMIUM_PATH`로 변경할 수 있습니다. 결과와 스크린샷은 `.sites-runtime/browser-qa/`에 저장됩니다. 코드 변경 후 다시 빌드했다면 QA Worker도 다시 시작하세요. `--remote`를 추가하지 마세요.
+다른 터미널에서 같은 저장소 루트로 이동한 뒤 `node tests/storefront-ux.cjs`, `node tests/signup-browser.cjs`를 순서대로 실행합니다. Playwright가 별도로 제공되는 환경이라면 해당 모듈이 Node에서 읽히도록 설정해야 합니다. 기본 Chromium 위치는 `/usr/bin/chromium`이며 `CHROMIUM_PATH`로 변경할 수 있습니다. 결과와 스크린샷은 `.sites-runtime/browser-qa/`에 저장됩니다. 코드 변경 후 다시 빌드했다면 QA Worker도 다시 시작하세요. `--remote`를 추가하지 마세요.
 
-### ソースと配布・復旧
+### 소스 전달과 복구
 
 이번 업데이트는 대표님이 제공한 ZIP을 기준으로 했습니다. ZIP에는 원래 Git 이력이 없어, 원본 가져오기를 별도 기준 커밋으로 기록했습니다. 마지막 참고 커밋으로 강제 되돌리지 않았습니다. `.openai/hosting.json`의 기존 프로젝트 ID, `DB`, `BUCKET`을 유지했습니다.
 

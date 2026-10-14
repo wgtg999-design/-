@@ -1,11 +1,98 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="독립 스트릿 의류 브랜드를 위한 쇼핑몰 디자인 시안. 가상 상품과 AI 룩북을 사용합니다."><title>YOUR LABEL — Independent Uniform</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
-<body><a class="skip" href="#shop">상품으로 건너뛰기</a><div class="notice">COLLECTION 001 — INDEPENDENT UNIFORM</div>
-<header><button class="mobile-menu" aria-label="메뉴 열기" aria-controls="store-nav" aria-expanded="false">☰</button><nav id="store-nav" aria-label="주 메뉴"><a href="#shop">SHOP</a><a href="#archive">ARCHIVE</a><a href="#about">ABOUT</a><button class="nav-contact" data-info="contact">CONTACT</button><a class="menu-account-link" href="/signup">로그인 / 회원가입</a></nav><a class="logo" href="#">YOUR LABEL<span>®</span></a><div class="tools"><a class="account-link" href="/signup">로그인 / 회원가입</a><a id="admin-entry" href="/admin" hidden>관리자 모드</a><button id="search-button" aria-label="상품 검색"><svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 6 6"/></svg></button><button id="bag-button" aria-label="장바구니 열기"><svg viewBox="0 0 24 24"><path d="M4 7h16l1 14H3L4 7Zm4 0V5a4 4 0 0 1 8 0v2"/></svg><span id="bag-count">0</span></button></div></header>
-<main><h1 class="sr-only">YOUR LABEL — Collection 001</h1><section class="hero" aria-label="컬렉션 룩북"><img id="hero-photo" src="/assets/campaign-v2.png" alt="워싱 재킷과 레더 의상을 입은 세 모델의 AI 패션 캠페인" fetchpriority="high"><div class="campaign-caption"><span>COLLECTION 001</span><a href="#shop">DISCOVER ↗</a></div><div class="hero-pagination" role="group" aria-label="룩북 이미지 선택"><button class="selected" data-slide="0" aria-label="첫 번째 룩북" aria-pressed="true"></button><button data-slide="1" aria-label="두 번째 룩북" aria-pressed="false"></button></div></section>
-<section id="shop" class="shop"><div class="section-title"><h2>NEW COLLECTION</h2><span>ESSENTIAL FORMS / 001</span></div><div class="shop-controls"><div class="filters" role="group" aria-label="상품 분류"><button class="active" data-category="ALL" aria-pressed="true">ALL</button><button data-category="OUTER" aria-pressed="false">OUTER</button><button data-category="BOTTOMS" aria-pressed="false">BOTTOMS</button><button data-category="TOPS" aria-pressed="false">TOPS</button><button data-category="ACC" aria-pressed="false">ACC</button></div><label class="sort">SORT <select id="sort" aria-label="상품 정렬"><option value="default">기본순</option><option value="low">낮은 가격순</option><option value="high">높은 가격순</option></select></label></div><div id="search-area" hidden><label for="search">상품 검색</label><input id="search" type="search" placeholder="상품명 또는 색상 검색"><button id="clear-search">초기화</button></div><div id="products" class="products"></div><p id="empty" hidden>검색된 상품이 없습니다.</p></section>
-<section id="archive" class="editorial"><div class="editorial-heading"><h2>COLLECTION JOURNAL</h2><span>VOLUME 01</span></div><button class="editorial-photo" id="lookbook-button" aria-label="전체 룩북 보기"><img loading="lazy" src="/assets/campaign.png" alt="콘크리트 공간에서 촬영한 AI 컬렉션 룩북"><span>VIEW THE EDITORIAL ↗</span></button><div class="editorial-bottom"><p>INDEPENDENT UNIFORM</p><p>SEOUL — COLLECTION 001</p></div></section><section id="about" class="about"><p>YOUR LABEL</p><h2>남들과 다른 결. 방향은 분명하게.</h2><p>일상의 실루엣을 다시 바라보는 독립 스트릿웨어.</p></section></main>
-<footer><a class="footer-logo" href="#">YOUR LABEL</a><div><p>INDEPENDENT UNIFORM.</p><p>SEOUL, SOUTH KOREA</p></div><div><button data-info="guide">SHOPPING GUIDE</button><button data-info="contact">CONTACT</button><a class="footer-account-link" href="/signup">로그인 / 회원가입</a></div><small>© 2026 YOUR LABEL · 디자인 시안: 임시 브랜드명 · AI 이미지 · 가상 상품 및 가격</small><a class="admin-footer" href="/admin" hidden>관리자 모드 →</a></footer>
-<dialog id="product-dialog"><button class="close" aria-label="상품 닫기">✕</button><div id="product-detail"></div></dialog>
-<dialog id="bag-dialog"><button class="close" aria-label="장바구니 닫기">✕</button><h2>YOUR BAG <span id="cart-title-count"></span></h2><p class="muted">이 브라우저에 저장되는 체험용 장바구니입니다.</p><div id="cart-items"></div><div class="total"><span>SUBTOTAL</span><strong id="cart-total"></strong></div><p class="muted">주문은 회원 로그인 후 접수합니다. 카드 결제는 제공하지 않습니다.</p><a class="primary checkout-link" href="/account?next=checkout#checkout">주문서 작성</a><button class="primary" id="continue">계속 둘러보기</button></dialog>
-<dialog id="info-dialog"><button class="close" aria-label="안내 닫기">✕</button><div id="info-content"></div></dialog><p id="toast" role="status" aria-live="polite"></p></body></html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="독립 스트릿 의류 브랜드를 위한 쇼핑몰 디자인 시안. 가상 상품과 AI 룩북을 사용합니다.">
+  <title>YOUR LABEL — Independent Uniform</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/i18n.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body class="store-page">
+  <a class="skip" href="#shop" data-i18n="home.skip">상품으로 건너뛰기</a>
+
+  <div class="mobile-bar">
+    <button class="mobile-menu" aria-label="메뉴 열기" aria-controls="site-sidebar" aria-expanded="false" data-i18n-aria-label="home.menuOpen">MENU</button>
+    <a class="mobile-logo" href="#">YOUR LABEL</a>
+    <button id="mobile-bag-button" aria-label="장바구니 열기" data-i18n-aria-label="home.cartOpen"><span data-i18n="nav.cart">CART</span> (<span data-cart-count>0</span>)</button>
+  </div>
+  <button id="menu-backdrop" aria-label="메뉴 닫기" data-i18n-aria-label="home.menuClose" hidden></button>
+  <header class="site-sidebar" id="site-sidebar">
+    <button id="menu-close" aria-label="메뉴 닫기" data-i18n-aria-label="home.menuClose">✕</button>
+    <a class="logo" href="#">YOUR LABEL</a>
+    <nav id="store-nav" aria-label="주 메뉴" class="sidebar-primary">
+      <a href="#shop" data-view="best" data-i18n="nav.best">BEST ITEM</a>
+      <a href="#shop" data-view="all" data-i18n="nav.product">PRODUCT</a>
+      <a href="#about" data-i18n="nav.about">ABOUT</a>
+      <a href="#archive" data-i18n="nav.collection">COLLECTION</a>
+      <a href="#community" data-i18n="nav.community">COMMUNITY</a>
+      <button id="language-button" aria-haspopup="dialog"><span data-i18n="nav.language">LANGUAGE</span> : <span data-language-label>한국어</span></button>
+    </nav>
+    <div class="sidebar-tools">
+      <a class="account-link" href="/signup" data-i18n="nav.login">로그인 / 회원가입</a>
+      <a id="mypage-link" href="/account" data-i18n="nav.myAccount">MYPAGE</a>
+      <button id="bag-button" aria-label="장바구니 열기" data-i18n-aria-label="home.cartOpen"><span data-i18n="nav.cart">CART</span> (<span id="bag-count">0</span>)</button>
+      <button id="wishlist-button"><span data-i18n="nav.wishlist">WISHLIST</span> (<span id="wishlist-count">0</span>)</button>
+      <button id="search-button" data-i18n="nav.search">SEARCH</button>
+      <a id="admin-entry" href="/admin" hidden>관리자 모드</a>
+    </div>
+    <div class="sidebar-social">
+      <button data-info="instagram" data-i18n="nav.instagram">INSTAGRAM</button>
+      <button data-info="kakao" data-i18n="nav.kakaotalk">KAKAOTALK</button>
+    </div>
+  </header>
+
+  <main class="store-main">
+    <h1 class="sr-only">YOUR LABEL — Collection 001</h1>
+    <section class="hero" aria-label="컬렉션 룩북">
+      <img id="hero-photo" src="/assets/campaign-v2.png" alt="워싱 재킷과 레더 의상을 입은 세 모델의 AI 패션 캠페인" fetchpriority="high">
+      <p class="notice">COLLECTION 001 — INDEPENDENT UNIFORM</p>
+      <div class="campaign-caption"><span data-i18n="home.collection">COLLECTION 001</span><a href="#shop" data-i18n="home.discover">DISCOVER ↗</a></div>
+      <div class="hero-pagination" role="group" aria-label="룩북 이미지 선택" data-i18n-aria-label="home.photoSelect">
+        <button class="selected" data-slide="0" aria-label="첫 번째 룩북" aria-pressed="true" data-i18n-aria-label="home.firstSlide"></button>
+        <button data-slide="1" aria-label="두 번째 룩북" aria-pressed="false" data-i18n-aria-label="home.secondSlide"></button>
+      </div>
+    </section>
+
+    <section id="shop" class="shop">
+      <div class="section-title"><h2 data-i18n="home.shopTitle">NEW COLLECTION</h2><span data-i18n="home.shopSubtitle">ESSENTIAL FORMS / 001</span></div>
+      <div class="shop-controls">
+        <div class="filters" role="group" aria-label="상품 분류" data-i18n-aria-label="home.categoryLabel">
+          <button class="active" data-category="ALL" aria-pressed="true" data-i18n="category.ALL">ALL</button>
+          <button data-category="OUTER" aria-pressed="false" data-i18n="category.OUTER">OUTER</button>
+          <button data-category="BOTTOMS" aria-pressed="false" data-i18n="category.BOTTOMS">BOTTOMS</button>
+          <button data-category="TOPS" aria-pressed="false" data-i18n="category.TOPS">TOPS</button>
+          <button data-category="ACC" aria-pressed="false" data-i18n="category.ACC">ACC</button>
+        </div>
+        <label class="sort"><span data-i18n="home.sort">SORT</span><select id="sort" aria-label="상품 정렬" data-i18n-aria-label="home.sort"><option value="default" data-i18n="home.sortDefault">기본순</option><option value="low" data-i18n="home.sortLow">낮은 가격순</option><option value="high" data-i18n="home.sortHigh">높은 가격순</option></select></label>
+      </div>
+      <div id="search-area" hidden><label for="search" data-i18n="home.searchLabel">상품 검색</label><input id="search" type="search" placeholder="상품명 또는 색상 검색" data-i18n-placeholder="home.searchPlaceholder"><button id="clear-search" data-i18n="home.resetFilters">초기화</button></div>
+      <div id="products" class="products"></div>
+      <div id="empty" hidden><p data-i18n="home.noProducts">검색된 상품이 없습니다.</p><button id="reset-filters" data-i18n="home.resetFilters">초기화</button></div>
+    </section>
+
+    <section id="archive" class="editorial">
+      <div class="editorial-heading"><h2 data-i18n="home.journal">COLLECTION JOURNAL</h2><span data-i18n="home.journalVolume">VOLUME 01</span></div>
+      <button class="editorial-photo" id="lookbook-button" aria-label="전체 룩북 보기" data-i18n-aria-label="home.viewEditorial"><img loading="lazy" src="/assets/campaign.png" alt="콘크리트 공간에서 촬영한 AI 컬렉션 룩북"><span data-i18n="home.viewEditorial">VIEW THE EDITORIAL ↗</span></button>
+      <div class="editorial-bottom"><p data-i18n="home.editorialUniform">INDEPENDENT UNIFORM</p><p data-i18n="home.editorialLocation">SEOUL — COLLECTION 001</p></div>
+    </section>
+    <section id="about" class="about"><p>YOUR LABEL</p><h2 data-i18n="home.aboutTagline">남들과 다른 결. 방향은 분명하게.</h2><p data-i18n="home.aboutDescription">일상의 실루엣을 다시 바라보는 독립 스트릿웨어.</p></section>
+    <section id="community" class="community"><div class="section-title"><h2 data-i18n="home.communityTitle">COMMUNITY</h2></div><p class="muted" data-i18n="home.communityIntro">쇼핑 안내와 자주 묻는 질문을 확인해 주세요.</p><div id="community-content"></div></section>
+  </main>
+
+  <footer class="store-footer">
+    <a class="footer-logo" href="#">YOUR LABEL</a>
+    <div><p data-i18n="home.footerUniform">INDEPENDENT UNIFORM.</p><p data-i18n="home.footerLocation">SEOUL, SOUTH KOREA</p></div>
+    <div class="footer-links"><button data-info="guide" data-i18n="home.shoppingGuide">SHOPPING GUIDE</button><button data-info="contact" data-i18n="home.contact">CONTACT</button><a class="footer-account-link" href="/signup" data-i18n="home.footerAccount">로그인 / 회원가입</a></div>
+    <small data-i18n="home.demoNotice">© 2026 YOUR LABEL · 디자인 시안: 임시 브랜드명 · AI 이미지 · 가상 상품 및 가격</small>
+    <a class="admin-footer" href="/admin" hidden>관리자 모드 →</a>
+  </footer>
+
+  <dialog id="product-dialog"><button class="close" aria-label="상품 닫기" data-i18n-aria-label="home.productClose">✕</button><div id="product-detail"></div></dialog>
+  <dialog id="bag-dialog"><button class="close" aria-label="장바구니 닫기" data-i18n-aria-label="home.bagClose">✕</button><h2><span data-i18n="home.bagTitle">YOUR BAG</span> <span id="cart-title-count"></span></h2><p class="muted" data-i18n="home.bagLocalNotice">이 브라우저에 저장되는 체험용 장바구니입니다.</p><div id="cart-items"></div><div class="total"><span data-i18n="home.subtotal">SUBTOTAL</span><strong id="cart-total"></strong></div><p class="muted" data-i18n="home.orderNotice">주문은 회원 로그인 후 접수합니다. 카드 결제는 제공하지 않습니다.</p><a class="primary checkout-link" href="/account?next=checkout#checkout" data-i18n="home.checkout">주문서 작성</a><button class="primary" id="continue" data-i18n="home.continue">계속 둘러보기</button></dialog>
+  <dialog id="info-dialog"><button class="close" aria-label="안내 닫기" data-i18n-aria-label="home.infoClose">✕</button><div id="info-content"></div></dialog>
+  <dialog id="language-dialog"><button class="close" aria-label="닫기" data-i18n-aria-label="general.close">✕</button><h2 data-i18n="home.languageTitle">LANGUAGE</h2><p class="muted" data-i18n="home.languageDescription">사용할 언어를 선택해 주세요.</p><div class="language-list"><button data-set-language="ko" lang="ko" aria-pressed="true">한국어</button><button data-set-language="zh-CN" lang="zh-CN" aria-pressed="false">简体中文</button><button data-set-language="zh-TW" lang="zh-TW" aria-pressed="false">繁體中文</button><button data-set-language="ja" lang="ja" aria-pressed="false">日本語</button></div></dialog>
+  <p id="toast" role="status" aria-live="polite"></p>
+</body>
+</html>
