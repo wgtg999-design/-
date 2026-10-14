@@ -9,7 +9,7 @@ const crypto = require('node:crypto');
 const ts = require('typescript');
 
 const root = path.resolve(__dirname, '..');
-const assetNames = ['campaign-v2.png', 'campaign.png', 'products.png'];
+const assetNames = ['campaign-wide.png', 'campaign.png', 'products.png'];
 const sourceNames = [
   'legacy/store.html', 'public/style.css', 'public/i18n.js', 'public/app.js', 'lib/content.ts',
   ...assetNames.map(name => 'public/assets/' + name),
@@ -138,7 +138,7 @@ function main() {
   html = html.slice(0, footerEnd) + note + html.slice(footerEnd);
   // Even a new-tab click or JavaScript-disabled browser stays in this file.
   let serviceLinks = 0;
-  html = html.replace(/\bhref="(\/(?:signup|account|admin|mypage)(?:[/?#][^"]*)?)"/g, (_attribute, service) => {
+  html = html.replace(/\bhref="(\/(?:signup|account|admin|mypage|policies)(?:[/?#][^"]*)?)"/g, (_attribute, service) => {
     serviceLinks++;
     return 'href="#preview-disclaimer" data-preview-service="' + service + '"';
   });

@@ -1,4 +1,5 @@
 *{box-sizing:border-box}
+:root{--store-rail:240px}
 html{scroll-behavior:smooth;scroll-padding-top:24px}
 body{margin:0;color:#151515;background:#fff;font:12px Arial,'Noto Sans KR','Noto Sans JP',sans-serif}
 button,a,input,select{-webkit-tap-highlight-color:transparent}
@@ -30,15 +31,15 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .mobile-bar,#menu-close,#menu-backdrop{display:none}
 .store-main,.store-footer{margin-left:240px;min-width:0}
 
-.hero{height:100vh;height:100svh;min-height:540px;max-height:1400px;position:relative;background:#ddd;overflow:hidden}
-.hero>img{width:100%;height:100%;object-fit:cover;object-position:50% 39%;display:block}
-.hero .notice{position:absolute;top:22px;right:28px;left:28px;margin:0;text-align:right;font-size:8px;line-height:1.8;letter-spacing:.9px;color:#fff;text-shadow:0 1px 4px #0007;overflow-wrap:anywhere}
-.campaign-caption{position:absolute;bottom:29px;left:28px;right:28px;display:flex;justify-content:space-between;gap:18px;color:#fff;font-size:9px;letter-spacing:1.2px;text-shadow:0 1px 4px #0007}
+.hero{width:calc(100% + var(--store-rail));margin-left:calc(-1 * var(--store-rail));height:100vh;height:100svh;min-height:540px;max-height:1400px;position:relative;background:#ddd;overflow:hidden}
+.hero>img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+.hero .notice{position:absolute;top:22px;right:28px;left:calc(var(--store-rail) + 28px);margin:0;text-align:right;font-size:8px;line-height:1.8;letter-spacing:.9px;color:#151515;text-shadow:0 1px 3px #ffffff80;overflow-wrap:anywhere}
+.campaign-caption{position:absolute;bottom:29px;left:calc(var(--store-rail) + 28px);right:28px;display:flex;justify-content:space-between;gap:18px;color:#151515;font-size:9px;letter-spacing:1.2px;text-shadow:0 1px 3px #ffffff80}
 .campaign-caption a{min-height:32px;display:flex;align-items:center;margin-top:-12px}
-.hero-pagination{display:flex;gap:8px;position:absolute;bottom:15px;left:50%;transform:translateX(-50%)}
+.hero-pagination{display:flex;gap:8px;position:absolute;bottom:15px;left:calc(50% + var(--store-rail) / 2);transform:translateX(-50%)}
 .hero-pagination button{width:44px;height:44px;padding:0;display:grid;place-items:center}
-.hero-pagination button:after{content:'';width:6px;height:6px;border-radius:50%;background:#ffffff70}
-.hero-pagination button.selected:after{background:#fff}
+.hero-pagination button:after{content:'';width:6px;height:6px;border-radius:50%;background:#15151550}
+.hero-pagination button.selected:after{background:#151515}
 
 .shop{padding:62px 28px 85px}
 .section-title,.editorial-heading{display:flex;justify-content:space-between;align-items:center;gap:18px}
@@ -100,7 +101,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .store-footer p{color:#777;font-size:10px;line-height:1.8;margin-top:0}
 .footer-links button,.footer-account-link{display:block;min-height:32px;padding:7px 0;font-size:10px;text-align:left}
 .footer-links button:hover,.footer-account-link:hover{text-decoration:underline;text-underline-offset:3px}
+.footer-policy-links{display:flex;gap:14px;flex-wrap:wrap}
+.footer-policy-links a{font-size:10px;min-height:32px;display:inline-flex;align-items:center}
+.footer-policy-links a:hover{text-decoration:underline;text-underline-offset:3px}
 .store-footer small{grid-column:1/-1;color:#999;font-size:9px;line-height:1.8}
+#test-business{display:block;margin-top:8px;white-space:pre-line}
 .admin-footer{font-size:11px;text-decoration:underline}
 
 dialog{border:0;padding:45px 32px;max-width:900px;width:calc(100% - 36px);max-height:90svh;overflow:auto;color:#151515;background:#fff}
@@ -147,10 +152,12 @@ body.menu-is-open{overflow:hidden}
 #toast{position:fixed;bottom:24px;left:calc(50% + 120px);transform:translateX(-50%);background:#151515;color:#fff;padding:14px 22px;z-index:80;display:none;max-width:calc(100% - 36px);line-height:1.6;text-align:center}
 #toast.visible{display:block}
 
-@media(min-width:1700px){.site-sidebar{width:260px;padding-left:33px;padding-right:33px}.store-main,.store-footer{margin-left:260px}.shop,.editorial,.community{padding-left:40px;padding-right:40px}#toast{left:calc(50% + 130px)}}
+@media(min-width:801px){.site-sidebar.hero-overlay{background:transparent;color:#fff;mix-blend-mode:difference}}
+@media(min-width:1700px){:root{--store-rail:260px}.site-sidebar{width:260px;padding-left:33px;padding-right:33px}.store-main,.store-footer{margin-left:260px}.shop,.editorial,.community{padding-left:40px;padding-right:40px}#toast{left:calc(50% + 130px)}}
 @media(min-width:801px) and (max-height:690px){.site-sidebar{padding-top:23px}.site-sidebar .logo{font-size:36px}.sidebar-primary{margin-top:30px}.sidebar-tools{margin-top:27px}.sidebar-social{padding-top:25px}.sidebar-primary a,.sidebar-primary button,.sidebar-tools a,.sidebar-tools button,.sidebar-social button,.sidebar-social a{min-height:27px}}
-@media(max-width:1100px) and (min-width:801px){.products{gap:27px 8px}.product-meta h3{font-size:10px}.filters{gap:15px}.shop,.editorial,.community{padding-left:20px;padding-right:20px}.store-footer{grid-template-columns:1fr 1fr}.footer-logo{grid-column:1/-1}.campaign-caption{font-size:8px;left:20px;right:20px}}
+@media(max-width:1100px) and (min-width:801px){.products{gap:27px 8px}.product-meta h3{font-size:10px}.filters{gap:15px}.shop,.editorial,.community{padding-left:20px;padding-right:20px}.store-footer{grid-template-columns:1fr 1fr}.footer-logo{grid-column:1/-1}.campaign-caption{font-size:8px;left:calc(var(--store-rail) + 20px);right:20px}}
 @media(max-width:800px){
+  :root{--store-rail:0px}
   html{scroll-padding-top:74px}
   .mobile-bar{display:flex;position:sticky;top:0;z-index:35;align-items:center;justify-content:space-between;height:58px;padding:0 14px;background:#fff;border-bottom:1px solid #eee;gap:12px}
   .mobile-menu,#mobile-bag-button{display:block;min-width:44px;min-height:44px;padding:8px 0;font-size:10px;white-space:nowrap;flex:none}
@@ -166,7 +173,7 @@ body.menu-is-open{overflow:hidden}
   .sidebar-social{padding-top:28px}
   .store-main,.store-footer{margin-left:0}
   .hero{height:calc(100svh - 58px);min-height:420px;max-height:1000px}
-  .hero>img{object-position:59% center}
+  .hero>img{object-position:73% center}
   .hero .notice{top:17px;left:17px;right:17px;font-size:7px;letter-spacing:.5px}
   .campaign-caption{left:17px;right:17px;bottom:24px;font-size:8px;letter-spacing:.9px}
   .campaign-caption a{min-height:44px}

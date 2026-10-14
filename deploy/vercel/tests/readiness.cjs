@@ -15,6 +15,7 @@ const environmentNames = [
   'TURSO_DATABASE_URL', 'TURSO_URL', 'TURSO_AUTH_TOKEN', 'TURSO_TOKEN',
   'TURSO_DATABASE_AUTH_TOKEN', 'TURSO_DATABASE_TOKEN', 'R2_ACCOUNT_ID',
   'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET_NAME', 'UPLOAD_SIGNING_SECRET',
+  'STORE_SITE_MODE',
 ];
 const savedEnvironment = Object.fromEntries(environmentNames.map(name => [name, process.env[name]]));
 const sentinels = [
@@ -27,6 +28,7 @@ const sentinels = [
 const fields = [
   'databaseConfigured', 'databaseConnected', 'schemaReady', 'catalog', 'legalReady',
   'ownerRegistered', 'ownerBootstrapConfigured', 'authConfigured', 'imageConfigured', 'uploadConfigured',
+  'testMode', 'testPoliciesAvailable',
 ].sort();
 let fixture, statements = [], forbidden = [], databaseCalls = 0, connectionFailure = false;
 let checks = 0;
@@ -72,9 +74,10 @@ function load(file) {
   if (cache.has(file)) return cache.get(file);
   const module = { exports: {} };
   const code = ts.transpileModule(fs.readFileSync(file, 'utf8'), {
-    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
   }).outputText;
   const localRequire = id => {
+    if (id.endsWith('.json')) return require(path.resolve(path.dirname(file), id));
     if (file === path.join(base, 'templates/setup/route.ts') && id === '../../runtime/readiness') return { getReadiness };
     if (file === path.join(base, 'templates/proxy.ts')) {
       if (id === './runtime/auth-config') return load(path.join(base, 'runtime/auth-config.ts'));
@@ -109,7 +112,7 @@ function reset({ initialized = false, env = {}, databaseConfigured = true } = {}
   fixture?.close();
   fixture = new DatabaseSync(':memory:');
   for (const name of environmentNames) delete process.env[name];
-  Object.assign(process.env, { NODE_ENV: 'production' });
+  Object.assign(process.env, { NODE_ENV: 'production', STORE_SITE_MODE: 'live' });
   if (databaseConfigured) Object.assign(process.env, {
     TURSO_DATABASE_URL: 'libsql://readonly-database.example.test',
     TURSO_AUTH_TOKEN: 'readonly-db-secret-token',
@@ -139,6 +142,7 @@ const emptyStatus = {
   catalog: 'unavailable', legalReady: false, ownerRegistered: false,
   ownerBootstrapConfigured: false,
   authConfigured: false, imageConfigured: false, uploadConfigured: false,
+  testMode: false, testPoliciesAvailable: false,
 };
 async function inspect(expected = {}) {
   const before = persistedSnapshot();
@@ -160,6 +164,23 @@ let getReadiness;
 (async () => {
   ({ getReadiness } = load(path.join(base, 'runtime/readiness.ts')));
   const { defaults } = load(path.join(repository, 'lib/content.ts'));
+  const { TEST_TERMS, TEST_PRIVACY } = load(path.join(base, 'runtime/test-policies.ts'));
+
+  reset({ databaseConfigured: false, env: { STORE_SITE_MODE: 'test' } });
+  await inspect({ testMode: true, testPoliciesAvailable: true, schemaReady: false, legalReady: false });
+  assert.equal(databaseCalls, 0);
+  reset({ initialized: true, env: { STORE_SITE_MODE: 'test' } });
+  await inspect({ testMode: true, testPoliciesAvailable: true, schemaReady: true, legalReady: false });
+  for (const legal of [{ terms: '', privacy: '' }, '{bad-json']) {
+    reset({ initialized: true, env: { STORE_SITE_MODE: 'test' } });
+    storeSettings(legal);
+    await inspect({ testMode: true, testPoliciesAvailable: false, legalReady: false });
+  }
+  for (const modeValue of ['test', 'live', 'unknown']) {
+    reset({ initialized: true, env: { STORE_SITE_MODE: modeValue } });
+    storeSettings({ terms: TEST_TERMS, privacy: TEST_PRIVACY });
+    await inspect({ testMode: modeValue === 'test', testPoliciesAvailable: false, legalReady: modeValue === 'test' });
+  }
 
   reset({ databaseConfigured: false });
   assert.deepEqual(await inspect(), emptyStatus);

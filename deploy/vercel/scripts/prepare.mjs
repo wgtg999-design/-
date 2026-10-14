@@ -27,6 +27,16 @@ for(const name of ['admin','commerce','content','order-sql','order-state','store
     text="import {isTrustedOrigin} from '../runtime/auth';\n"+text;
     text=text.replace("return req.headers.get('origin')===new URL(req.url).origin;","return isTrustedOrigin(req.headers.get('origin'))&&req.headers.get('origin')===new URL(req.url).origin;");
   }
+  if(name==='commerce'){
+    const emptySettings="const initial={accepting:false,shippingFee:0,bankInfo:'',support:'',terms:'',privacy:'',returnGuide:''};";
+    const loadedSettings='settings:r?settingsSchema.parse(JSON.parse(r.data)):initial,revision:r?.revision||0';
+    const saveSettings='const data=settingsSchema.parse(b.settings);';
+    if(!text.includes(emptySettings)||!text.includes(loadedSettings)||!text.includes(saveSettings))throw Error('Review changed commerce settings integration.');
+    text="import {getDefaultShopSettings,normalizeShopSettingsForMode,isTestSite} from '../runtime/test-site';\n"+text;
+    text=text.replace(emptySettings,'const initial=getDefaultShopSettings();');
+    text=text.replace(loadedSettings,'settings:normalizeShopSettingsForMode(r?settingsSchema.parse(JSON.parse(r.data)):initial),revision:r?.revision||0,testOnly:isTestSite()');
+    text=text.replace(saveSettings,saveSettings+"if(isTestSite()&&data.accepting)throw Error('테스트 사이트에서는 주문 접수를 열 수 없습니다.');");
+  }
   write('lib/'+name+'.ts',text);
 }
 for(const file of walk(path.join(source,'app')).filter(file=>path.basename(file)==='route.ts')){

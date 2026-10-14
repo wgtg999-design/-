@@ -6,13 +6,14 @@ export const runtime = 'nodejs';
 export async function GET() {
   const state = await getReadiness();
   const rows = [
+    ['사이트 모드', state.testMode ? '테스트 전용입니다. 사업자 정보는 가상이며 실제 주문 접수는 중지됩니다.' : '실제 운영 모드입니다. 테스트 안내는 가입 기본값으로 사용하지 않습니다.'],
     ['상품 저장소 연결', state.databaseConnected ? 'DB에 연결됩니다.' : state.databaseConfigured ? 'DB 연결을 확인해야 합니다.' : 'Turso 연결 설정이 필요합니다.'],
     ['저장 테이블 준비', state.schemaReady ? '현재 코드에 필요한 테이블을 확인했습니다.' : '새 DB 초기화 또는 기존 자료 이전을 확인해야 합니다.'],
     ['상품 자료', state.catalog === 'stored' ? '저장된 상품 자료를 읽을 수 있습니다. 기존 자료와 같은지는 별도 확인이 필요합니다.' : state.catalog === 'initial-sample' ? '초기 시안 상품을 표시하는 상태입니다. 실제 운영 자료 이전 여부를 확인하세요.' : '상품 자료를 아직 읽을 수 없습니다.'],
     ['로그인 서비스', state.authConfigured ? '로그인 설정이 있습니다. 실제 이메일 인증과 로그인을 확인해야 합니다.' : 'Clerk 키와 사이트 주소 설정이 필요합니다.'],
     ['관리자 등록', state.ownerRegistered ? '저장된 관리자 기록이 있습니다. 대표님 계정의 실제 접근을 확인해야 합니다.' : state.ownerBootstrapConfigured ? '관리자 이메일 설정이 있습니다. 대표님의 인증된 계정으로 관리자 화면을 열어 등록을 확인하세요.' : 'Vercel에서 OWNER_BOOTSTRAP_EMAIL에 대표님이 로그인할 이메일을 지정해야 합니다.'],
     ['이미지 교체', state.uploadConfigured ? '업로드 설정이 있습니다. 실제 R2 연결과 허용 주소를 확인해야 합니다.' : 'R2 연결과 업로드 서명 설정이 필요합니다.'],
-    ['쇼핑몰 회원 등록', state.legalReady ? '약관과 개인정보 안내가 등록되어 있습니다. 내용은 운영자가 확인해야 합니다.' : '실제 이용약관과 개인정보 안내를 등록해야 합니다.']
+    ['쇼핑몰 회원 등록', state.legalReady ? state.testMode ? '저장된 안내가 있습니다. 테스트용 여부와 내용을 확인한 뒤 가상정보로 가입을 시험하세요.' : '약관과 개인정보 안내가 등록되어 있습니다. 내용은 운영자가 확인해야 합니다.' : state.testPoliciesAvailable ? '테스트 이용약관·개인정보 안내를 준비했습니다. Clerk 인증과 DB 준비가 완료되어야 테스트 회원정보를 저장할 수 있습니다.' : state.testMode ? '저장된 안내가 비어 있거나 유효하지 않습니다. 관리자가 테스트 안내를 확인해야 합니다.' : '실제 이용약관과 개인정보 안내를 등록해야 합니다.']
   ];
   const canInitialize = state.databaseConnected && state.authConfigured && state.ownerBootstrapConfigured && !state.schemaReady;
   const preparation = state.schemaReady

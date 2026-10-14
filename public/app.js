@@ -11,6 +11,12 @@
   const cartKey = preview ? 'your-label-preview-cart' : 'your-label-cart';
   const wishlistKey = preview ? 'your-label-preview-wishlist' : 'your-label-wishlist';
   const mobile = matchMedia('(max-width: 800px)');
+  const campaign = $('.hero'), sidebar = $('#site-sidebar');
+  let campaignVisible = true;
+  function updateSidebarBackground() { sidebar.classList.toggle('hero-overlay', campaignVisible && !mobile.matches); }
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(entries => { campaignVisible = entries[0].isIntersecting; updateSidebarBackground(); }, {threshold:0}).observe(campaign);
+  }
   let inventory = [], products = [], category = 'ALL', search = '', sort = 'default';
   let cart = [], favorites = new Set(), content = null, view = 'all', currentProduct = null;
   let currentInfo = null, currentSlide = 0, toastTimer;
@@ -164,7 +170,7 @@
     if (!content) return;
     document.querySelectorAll('.logo,.mobile-logo,.footer-logo,.about>p:first-child').forEach(element => element.textContent = content.brand);
     $('.store-main h1').textContent = content.brand + ' — ' + t('home.collection');
-    const disclaimer = $('.store-footer small');
+    const disclaimer = $('[data-store-disclaimer]');
     disclaimer.removeAttribute('data-i18n'); disclaimer.textContent = t('home.demoNotice',{brand:content.brand});
     const notice = $('.notice');
     if (notice) notice.textContent = label(content,'notice');
@@ -240,7 +246,7 @@
   $('#language-button').onclick = () => { closeMenu(false); $('#language-dialog').showModal(); };
   $('.mobile-menu').onclick = () => $('#site-sidebar').classList.contains('open') ? closeMenu() : openMenu();
   $('#menu-close').onclick = () => closeMenu(); $('#menu-backdrop').onclick = () => closeMenu();
-  mobile.addEventListener('change', () => closeMenu(false));
+  mobile.addEventListener('change', () => { closeMenu(false); updateSidebarBackground(); });
   document.addEventListener('keydown', event => {
     if (!mobile.matches || !$('#site-sidebar').classList.contains('open')) return;
     if (event.key === 'Escape') { event.preventDefault(); closeMenu(); }
@@ -269,5 +275,20 @@
     if ($('#product-dialog').open && currentProduct) renderProduct(currentProduct,selectedSize);
     if ($('#info-dialog').open && currentInfo) showInfo(currentInfo);
   });
-  I.apply(); closeMenu(false); init();
+  async function loadPolicyLinks() {
+    if (preview) return;
+    try {
+      const response = await fetch('/api/policies', {cache:'no-store'});
+      if (!response.ok) return;
+      const policy = await response.json();
+      if (policy.terms !== '/policies/terms' || policy.privacy !== '/policies/privacy') return;
+      $('#footer-policy-links').hidden = false;
+      if (policy.testOnly && policy.business) {
+        const business = policy.business, info = $('#test-business');
+        info.textContent = `TEST STORE · ${business.shopName} · ${business.operator} / ${business.representative}\n${business.registrationNumber} · ${business.commerceRegistrationNumber} · ${business.address}\n${business.contact} · ${business.email} · ${business.effectiveDate}`;
+        info.hidden = false;
+      }
+    } catch { /* Optional document links never replace customer or admin authentication. */ }
+  }
+  I.apply(); closeMenu(false); updateSidebarBackground(); init(); loadPolicyLinks();
 })();

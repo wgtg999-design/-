@@ -1,6 +1,8 @@
 import { getDatabase, validateDatabaseUrl } from './database';
 import { authConfigured as authSettingsPresent } from './auth-config';
 import { contentSchema } from '../lib/content';
+import { isTestSite } from './test-site';
+import { isTestPolicy } from './test-policies';
 
 const schemaQueries = [
   'SELECT key,data,revision,updated_at FROM store_content WHERE 0',
@@ -16,12 +18,14 @@ const schemaQueries = [
 
 /** Public diagnostics: only coarse status, never keys, identities or records. */
 export async function getReadiness() {
+  const testMode = isTestSite();
   const result = {
     databaseConfigured: false, databaseConnected: false, schemaReady: false,
     catalog: 'unavailable' as 'unavailable' | 'initial-sample' | 'stored',
     legalReady: false, ownerRegistered: false,
     ownerBootstrapConfigured: !!process.env.OWNER_BOOTSTRAP_EMAIL?.trim(),
-    authConfigured: authSettingsPresent(), imageConfigured: false, uploadConfigured: false
+    authConfigured: authSettingsPresent(), imageConfigured: false, uploadConfigured: false,
+    testMode, testPoliciesAvailable: testMode,
   };
   result.imageConfigured = /^[a-f0-9]{32}$/.test(process.env.R2_ACCOUNT_ID ?? '')
     && !!process.env.R2_ACCESS_KEY_ID?.trim() && !!process.env.R2_SECRET_ACCESS_KEY?.trim()
@@ -52,10 +56,12 @@ export async function getReadiness() {
       } catch { /* Invalid saved content must not mask other independent checks. */ }
     }
     if (settings.status === 'fulfilled' && settings.value) {
+      result.testPoliciesAvailable = false;
       try {
         const value = JSON.parse(settings.value.data);
         result.legalReady = typeof value?.terms === 'string' && !!value.terms.trim()
-          && typeof value?.privacy === 'string' && !!value.privacy.trim();
+          && typeof value?.privacy === 'string' && !!value.privacy.trim()
+          && (testMode || !(isTestPolicy(value.terms) || isTestPolicy(value.privacy)));
       } catch { /* No private policy contents or parse details are exposed. */ }
     }
     result.ownerRegistered = owner.status === 'fulfilled' && !!owner.value;

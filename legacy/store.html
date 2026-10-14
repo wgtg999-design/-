@@ -18,7 +18,7 @@
     <button id="mobile-bag-button" aria-label="장바구니 열기" data-i18n-aria-label="home.cartOpen"><span data-i18n="nav.cart">CART</span> (<span data-cart-count>0</span>)</button>
   </div>
   <button id="menu-backdrop" aria-label="메뉴 닫기" data-i18n-aria-label="home.menuClose" hidden></button>
-  <header class="site-sidebar" id="site-sidebar">
+  <header class="site-sidebar hero-overlay" id="site-sidebar">
     <button id="menu-close" aria-label="메뉴 닫기" data-i18n-aria-label="home.menuClose">✕</button>
     <a class="logo" href="#">YOUR LABEL</a>
     <nav id="store-nav" aria-label="주 메뉴" class="sidebar-primary">
@@ -46,7 +46,7 @@
   <main class="store-main">
     <h1 class="sr-only">YOUR LABEL — Collection 001</h1>
     <section class="hero" aria-label="컬렉션 룩북">
-      <img id="hero-photo" src="/assets/campaign-v2.png" alt="워싱 재킷과 레더 의상을 입은 세 모델의 AI 패션 캠페인" fetchpriority="high">
+      <img id="hero-photo" src="/assets/campaign-wide.png" alt="스테인리스 공간에서 촬영한 세 모델의 가로형 AI 패션 캠페인" fetchpriority="high">
       <p class="notice">COLLECTION 001 — INDEPENDENT UNIFORM</p>
       <div class="campaign-caption"><span data-i18n="home.collection">COLLECTION 001</span><a href="#shop" data-i18n="home.discover">DISCOVER ↗</a></div>
       <div class="hero-pagination" role="group" aria-label="룩북 이미지 선택" data-i18n-aria-label="home.photoSelect">
@@ -84,8 +84,8 @@
   <footer class="store-footer">
     <a class="footer-logo" href="#">YOUR LABEL</a>
     <div><p data-i18n="home.footerUniform">INDEPENDENT UNIFORM.</p><p data-i18n="home.footerLocation">SEOUL, SOUTH KOREA</p></div>
-    <div class="footer-links"><button data-info="guide" data-i18n="home.shoppingGuide">SHOPPING GUIDE</button><button data-info="contact" data-i18n="home.contact">CONTACT</button><a class="footer-account-link" href="/signup" data-i18n="home.footerAccount">로그인 / 회원가입</a></div>
-    <small data-i18n="home.demoNotice">© 2026 YOUR LABEL · 디자인 시안: 임시 브랜드명 · AI 이미지 · 가상 상품 및 가격</small>
+    <div class="footer-links"><button data-info="guide" data-i18n="home.shoppingGuide">SHOPPING GUIDE</button><button data-info="contact" data-i18n="home.contact">CONTACT</button><a class="footer-account-link" href="/signup" data-i18n="home.footerAccount">로그인 / 회원가입</a><div id="footer-policy-links" class="footer-policy-links" hidden><a href="/policies/terms" data-i18n="auth.terms">이용약관</a><a href="/policies/privacy" data-i18n="auth.privacy">개인정보 안내</a></div></div>
+    <small><span data-store-disclaimer data-i18n="home.demoNotice">© 2026 YOUR LABEL · 디자인 시안: 임시 브랜드명 · AI 이미지 · 가상 상품 및 가격</span><span id="test-business" hidden></span></small>
     <a class="admin-footer" href="/admin" hidden>관리자 모드 →</a>
   </footer>
 

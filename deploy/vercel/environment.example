@@ -1,6 +1,8 @@
 # Vercel Project → Settings → Environment Variables에 실제 값을 등록하세요.
 # 이 파일은 이름 안내입니다. 비밀값이나 회원/주문 백업을 Git에 넣지 마세요.
 NEXT_PUBLIC_SITE_URL=
+# This checkout is an explicitly labelled prototype. Use live only with actual operating policies and service setup.
+STORE_SITE_MODE=test
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
 TURSO_DATABASE_URL=

@@ -33,6 +33,16 @@
   }
   global.StoreBrand=Object.freeze({load,apply,refreshTitle,getBrand:()=>brand});
   global.addEventListener('street-label:languagechange',refreshTitle);
+  async function loadPublicPolicyLinks(){
+    const links=global.document?.querySelector('#public-policy-links');
+    if(!links)return;
+    try{
+      const response=await global.fetch('/api/policies',{cache:'no-store'});
+      if(!response.ok)return;
+      const policy=await response.json();
+      if(policy.terms==='/policies/terms'&&policy.privacy==='/policies/privacy')links.hidden=false;
+    }catch{ /* Public documents do not authenticate or register a member. */ }
+  }
   apply();
-  load().catch(()=>{});
+  load().catch(()=>{});loadPublicPolicyLinks();
 })(window);
