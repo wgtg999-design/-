@@ -13,6 +13,8 @@
 
 이 서비스들은 별도 계정·사용량·요금 조건을 가집니다. 실제 외부 계정을 만들거나 비용을 발생시키는 배포는 이 코드 준비만으로 실행되지 않습니다. 기존 Sites의 ChatGPT 로그인과 D1·R2 연결은 자동 이전되지 않습니다. Vercel 배포본은 이메일 로그인이며, 기존 Sites 원본의 ChatGPT 로그인은 그대로입니다.
 
+Vercel의 Turso **Connect a Project** 화면에서는 Custom Prefix를 `TURSO`, Environments를 `Production`으로 선택합니다. **Create database branch for deployment**의 체크박스는 비워 두어 운영 배포마다 다른 DB가 생기지 않도록 합니다. Sensitive는 켭니다. 자동 생성되는 `TURSO_URL`과 Turso 토큰 이름을 앱과 이전 도구가 읽을 수 있습니다. Preview 검증용 DB는 별도로 연결합니다.
+
 ## 대표님이 Vercel에서 선택할 설정
 
 1. Vercel에 로그인하고 **Add New → Project → Import Git Repository**에서 `wgtg999-design/-`를 선택합니다.

@@ -19,13 +19,14 @@ export const extraTables = ['auth_identity_links','store_upload_tickets'];
 export const format = 'street-label-d1-export/v1';
 
 export function hostedClient() {
-  const raw = process.env.TURSO_DATABASE_URL?.trim();
+  const raw = process.env.TURSO_DATABASE_URL?.trim() || process.env.TURSO_URL?.trim();
   let url;
   try { url = new URL(raw ?? ''); } catch { throw new Error('Set TURSO_DATABASE_URL to the new hosted database URL.'); }
   if (!['libsql:','https:'].includes(url.protocol) || !url.hostname || url.username || url.password || url.search || url.hash) {
     throw new Error('Use a hosted libsql:// or https:// URL without embedded credentials; file databases are forbidden here.');
   }
-  const authToken = process.env.TURSO_AUTH_TOKEN?.trim();
+  const authToken = process.env.TURSO_AUTH_TOKEN?.trim() || process.env.TURSO_TOKEN?.trim()
+    || process.env.TURSO_DATABASE_AUTH_TOKEN?.trim() || process.env.TURSO_DATABASE_TOKEN?.trim();
   if (!authToken) throw new Error('Set TURSO_AUTH_TOKEN in the server environment.');
   return createClient({ url: url.href, authToken, intMode: 'number' });
 }
@@ -66,7 +67,7 @@ export function isMain(url) {
 
 export function fail(error) {
   // SDK failures can contain service details. Never print credentials/URLs.
-  const secrets = ['TURSO_DATABASE_URL','TURSO_AUTH_TOKEN','CLERK_SECRET_KEY','CLOUDFLARE_API_TOKEN'].map(key => process.env[key]).filter(Boolean);
+  const secrets = ['TURSO_DATABASE_URL','TURSO_URL','TURSO_AUTH_TOKEN','TURSO_TOKEN','TURSO_DATABASE_AUTH_TOKEN','TURSO_DATABASE_TOKEN','CLERK_SECRET_KEY','CLOUDFLARE_API_TOKEN'].map(key => process.env[key]).filter(Boolean);
   let message = error instanceof Error ? error.message : 'Operation failed.';
   for (const secret of secrets) message = message.split(secret).join('[redacted]');
   message = message.replace(/\b(?:https?|libsql):\/\/[^\s"'<>]+/gi,'[redacted URL]');

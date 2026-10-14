@@ -110,8 +110,11 @@ let database: DatabaseAdapter | undefined;
 
 export function getDatabase(): DatabaseAdapter {
   if (!database) {
-    const url = validateDatabaseUrl(process.env.TURSO_DATABASE_URL);
-    const authToken = process.env.TURSO_AUTH_TOKEN?.trim();
+    // Vercel's Turso integration uses <prefix>_URL and a prefixed token.
+    // The connection guide selects TURSO; canonical manual names also work.
+    const url = validateDatabaseUrl(process.env.TURSO_DATABASE_URL?.trim() || process.env.TURSO_URL?.trim());
+    const authToken = process.env.TURSO_AUTH_TOKEN?.trim() || process.env.TURSO_TOKEN?.trim()
+      || process.env.TURSO_DATABASE_AUTH_TOKEN?.trim() || process.env.TURSO_DATABASE_TOKEN?.trim();
     if (!authToken) throw new Error('Set TURSO_AUTH_TOKEN in the server environment.');
     database = createDatabase(createClient({ url, authToken, intMode: 'number' }));
   }
