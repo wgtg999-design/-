@@ -1,0 +1,12 @@
+packages:
+  - '.'
+minimumReleaseAge: 10080
+minimumReleaseAgeStrict: true
+minimumReleaseAgeIgnoreMissingTime: false
+trustLockfile: false
+strictDepBuilds: true
+allowBuilds:
+  sharp: true
+  libsql: true
+verifyDepsBeforeRun: false
+optimisticRepeatInstall: false

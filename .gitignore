@@ -30,6 +30,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+.dev.vars
+.dev.vars.*
 
 # vercel
 .vercel
@@ -54,3 +56,13 @@ next-env.d.ts
 /.codex/
 /outputs/
 /work/
+# Recreated from the original shop by deploy/vercel/scripts/prepare.mjs.
+/deploy/vercel/app/
+/deploy/vercel/lib/
+/deploy/vercel/public/
+/deploy/vercel/proxy.ts
+/deploy/vercel/.next/
+/deploy/vercel/next-env.d.ts
+**/node_modules/
+**/*.tsbuildinfo
+/deploy/vercel/.vercel/

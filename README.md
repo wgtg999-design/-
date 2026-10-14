@@ -1,5 +1,7 @@
 # Street Label — storefront and owner CMS
 
+**Vercel 전체 서버 배포 준비:** [deploy/vercel/README.md](deploy/vercel/README.md). GitHub에서 Vercel로 가져올 때 Root Directory를 `deploy/vercel`로 지정합니다. 원래 Sites 서버는 이 저장소 루트에 보존되어 있습니다.
+
 Vinext / Cloudflare Workers. D1 holds the catalog and pinned owner identity; R2 holds uploaded product and campaign images. The storefront uses a fixed left menu on desktop and a compact header with a sliding menu on mobile.
 
 ## 왼쪽 메뉴와 다국어 쇼핑몰
