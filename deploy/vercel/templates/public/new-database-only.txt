@@ -1,0 +1,131 @@
+-- Street Label: 새로 만든 완전히 빈 데이터베이스 전용
+-- 기존 상품 설정·관리자·회원·주문 데이터가 있는 DB에서는 실행하지 마세요.
+-- 이 파일을 전체 복사해 새 Turso DB의 SQL 편집기에 붙여 넣고 한 번 실행합니다.
+-- 성공하면 저장 테이블과 변경 이력만 만듭니다. 회원·주문·재고는 만들지 않습니다.
+-- NEW_EMPTY_DATABASE_REQUIRED 오류는 기존 테이블이 있다는 뜻입니다.
+-- 오류가 나면 실행을 멈추세요. 이 보호 검사를 지우거나 뒤의 SQL만 실행하지 마세요.
+
+BEGIN IMMEDIATE;
+
+-- 기존 DB이면 메인 테이블을 만들기 전에 전체 작업을 취소합니다.
+CREATE TEMP TABLE IF NOT EXISTS street_label_empty_database_guard (
+  existing_table_count INTEGER NOT NULL CHECK (existing_table_count = 0)
+);
+CREATE TEMP TRIGGER IF NOT EXISTS street_label_empty_database_refusal
+BEFORE INSERT ON street_label_empty_database_guard
+WHEN NEW.existing_table_count <> 0
+BEGIN
+  SELECT RAISE(ROLLBACK, 'NEW_EMPTY_DATABASE_REQUIRED');
+END;
+INSERT INTO street_label_empty_database_guard(existing_table_count)
+SELECT count(*) FROM main.sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%';
+
+CREATE TABLE store_migration_ledger (
+  migration TEXT PRIMARY KEY NOT NULL,
+  sha256 TEXT NOT NULL,
+  applied_at TEXT NOT NULL
+);
+
+-- 0000_premium_arachne.sql: 97277b3e4a06b5bc2d5512e96c178c53f93cbcc3e349107076cb214795ad0053
+CREATE TABLE `store_content` (
+	`key` text PRIMARY KEY NOT NULL,
+	`data` text NOT NULL,
+	`revision` integer DEFAULT 0 NOT NULL,
+	`updated_at` text NOT NULL
+);
+CREATE TABLE `store_owner` (
+	`key` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL
+);
+INSERT INTO store_migration_ledger(migration, sha256, applied_at)
+VALUES ('0000_premium_arachne.sql', '97277b3e4a06b5bc2d5512e96c178c53f93cbcc3e349107076cb214795ad0053', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+
+-- 0001_simple_harpoon.sql: b26ec20025dd16201deed2e756744c30b42008428f89b41dd32f4b4a2b728ce0
+CREATE TABLE `shop_customers` (
+	`user_id` text PRIMARY KEY NOT NULL,
+	`email` text NOT NULL,
+	`name` text NOT NULL,
+	`phone` text NOT NULL,
+	`consent_version` integer NOT NULL,
+	`created_at` text NOT NULL
+);
+CREATE TABLE `shop_events` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`order_id` text NOT NULL,
+	`actor` text NOT NULL,
+	`action` text NOT NULL,
+	`note` text NOT NULL,
+	`created_at` text NOT NULL
+);
+CREATE TABLE `shop_inventory` (
+	`sku` text PRIMARY KEY NOT NULL,
+	`product_id` text NOT NULL,
+	`size` text NOT NULL,
+	`stock` integer DEFAULT 0 NOT NULL CHECK (`stock` >= 0),
+	`max_order` integer DEFAULT 3 NOT NULL CHECK (`max_order` BETWEEN 1 AND 99),
+	`enabled` integer DEFAULT 0 NOT NULL,
+	`revision` integer DEFAULT 0 NOT NULL
+);
+CREATE TABLE `shop_orders` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`request_key` text NOT NULL,
+	`items` text NOT NULL,
+	`address` text NOT NULL,
+	`total` integer NOT NULL,
+	`shipping_fee` integer NOT NULL,
+	`status` text DEFAULT 'received' NOT NULL,
+	`payment` text DEFAULT 'awaiting_payment' NOT NULL,
+	`request_from` text DEFAULT '' NOT NULL,
+	`carrier` text DEFAULT '' NOT NULL,
+	`tracking` text DEFAULT '' NOT NULL,
+	`refund_ref` text DEFAULT '' NOT NULL,
+	`restock` integer DEFAULT 0 NOT NULL,
+	`restocked` integer DEFAULT 0 NOT NULL,
+	`revision` integer DEFAULT 0 NOT NULL,
+	`catalog_revision` integer NOT NULL,
+	`settings_revision` integer NOT NULL,
+	`last_actor` text NOT NULL,
+	`last_note` text DEFAULT '' NOT NULL,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL
+);
+CREATE TABLE `shop_settings` (
+	`key` text PRIMARY KEY NOT NULL,
+	`data` text NOT NULL,
+	`revision` integer DEFAULT 0 NOT NULL
+);
+CREATE UNIQUE INDEX shop_orders_request ON shop_orders(user_id, request_key);
+CREATE INDEX shop_orders_customer_time ON shop_orders(user_id, created_at);
+CREATE INDEX shop_events_order ON shop_events(order_id, id);
+INSERT INTO store_migration_ledger(migration, sha256, applied_at)
+VALUES ('0001_simple_harpoon.sql', 'b26ec20025dd16201deed2e756744c30b42008428f89b41dd32f4b4a2b728ce0', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+
+-- 0002_bizarre_sersi.sql: f76e33378adb49290eb3d086d7ddb213019f77aac4210c1a7d359f28d0d9122c
+ALTER TABLE `shop_orders` ADD `action_token` text DEFAULT '' NOT NULL;
+INSERT INTO store_migration_ledger(migration, sha256, applied_at)
+VALUES ('0002_bizarre_sersi.sql', 'f76e33378adb49290eb3d086d7ddb213019f77aac4210c1a7d359f28d0d9122c', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+
+-- 0003_vercel.sql: 138772ff1005ac71e9190b151b2ea3ddd26b9eeb12d011db5c0c9598ba325c65
+CREATE TABLE auth_identity_links (
+  provider_user_id TEXT PRIMARY KEY NOT NULL,
+  legacy_user_id TEXT UNIQUE NOT NULL,
+  verified_at TEXT NOT NULL
+);
+CREATE TABLE store_upload_tickets (
+  id TEXT PRIMARY KEY NOT NULL,
+  user_id TEXT NOT NULL,
+  object_key TEXT UNIQUE NOT NULL,
+  content_type TEXT NOT NULL CHECK(content_type IN ('image/jpeg','image/png','image/webp')),
+  byte_length INTEGER NOT NULL CHECK(byte_length > 0 AND byte_length <= 8388608),
+  expires_at INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','processing','complete','rejected')),
+  final_key TEXT
+);
+CREATE INDEX store_upload_tickets_expiry ON store_upload_tickets(expires_at);
+INSERT INTO store_migration_ledger(migration, sha256, applied_at)
+VALUES ('0003_vercel.sql', '138772ff1005ac71e9190b151b2ea3ddd26b9eeb12d011db5c0c9598ba325c65', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'));
+
+COMMIT;
+
+SELECT 'INITIALIZATION_COMPLETE' AS result;

@@ -6,7 +6,7 @@ export async function isOwner(){
  const owner=await env.DB.prepare('SELECT user_id FROM store_owner WHERE key = ?').bind('owner').first<{user_id:string}>();
  if(owner)return owner.user_id===user.userId;
  // Bootstrap only from the owner identity confirmed by Sites. Afterwards use the site-scoped ID.
- const email=env.OWNER_BOOTSTRAP_EMAIL;if(!email||user.email.toLowerCase()!==email.toLowerCase())return false;
+ const email=env.OWNER_BOOTSTRAP_EMAIL?.trim().toLowerCase();if(!email||user.email.trim().toLowerCase()!==email)return false;
  await env.DB.prepare('INSERT OR IGNORE INTO store_owner (key,user_id) VALUES (?,?)').bind('owner',user.userId).run();
  const pinned=await env.DB.prepare('SELECT user_id FROM store_owner WHERE key = ?').bind('owner').first<{user_id:string}>();
  return pinned?.user_id===user.userId;

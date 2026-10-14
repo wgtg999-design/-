@@ -26,7 +26,7 @@ const sentinels = [
 ];
 const fields = [
   'databaseConfigured', 'databaseConnected', 'schemaReady', 'catalog', 'legalReady',
-  'ownerRegistered', 'authConfigured', 'imageConfigured', 'uploadConfigured',
+  'ownerRegistered', 'ownerBootstrapConfigured', 'authConfigured', 'imageConfigured', 'uploadConfigured',
 ].sort();
 let fixture, statements = [], forbidden = [], databaseCalls = 0, connectionFailure = false;
 let checks = 0;
@@ -137,6 +137,7 @@ function persistedSnapshot() {
 const emptyStatus = {
   databaseConfigured: false, databaseConnected: false, schemaReady: false,
   catalog: 'unavailable', legalReady: false, ownerRegistered: false,
+  ownerBootstrapConfigured: false,
   authConfigured: false, imageConfigured: false, uploadConfigured: false,
 };
 async function inspect(expected = {}) {
@@ -206,11 +207,11 @@ let getReadiness;
   fixture.prepare('INSERT INTO store_owner VALUES (?,?)').run('owner', 'private-owner-user-id');
   fixture.prepare('INSERT INTO shop_customers VALUES (?,?,?,?,?,?)').run('private-customer-user-id', 'private-customer@example.test', 'Private customer', '01000000000', 7, '2026-10-14T00:00:00Z');
   process.env.OWNER_BOOTSTRAP_EMAIL = 'owner-private@example.test';
-  await inspect({ ownerRegistered: true, legalReady: true });
+  await inspect({ ownerRegistered: true, legalReady: true, ownerBootstrapConfigured: true });
   assert(!statements.some(({ sql }) => /\bFROM\s+["`]?shop_(?:customers|orders|events)\b/i.test(sql) && !/\bWHERE\s+0\b/i.test(sql)), 'Customer/order data is never queried.');
   assert(!statements.some(({ sql }) => /SELECT\s+(?:\*|user_id)\s+FROM\s+store_owner/i.test(sql)), 'Owner identity is never retrieved.');
   reset({ initialized: true, env: { OWNER_BOOTSTRAP_EMAIL: 'owner-private@example.test' } });
-  await inspect({ ownerRegistered: false });
+  await inspect({ ownerRegistered: false, ownerBootstrapConfigured: true });
   assert.equal(fixture.prepare('SELECT count(*) AS n FROM store_owner').get().n, 0, 'Configured bootstrap email is never assigned by diagnostics.');
 
   const authEnv = { NEXT_PUBLIC_SITE_URL: 'https://shop.example.test', NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: 'pk_test_readonly-public', CLERK_SECRET_KEY: 'sk_test_readonly-secret' };
@@ -228,8 +229,8 @@ let getReadiness;
   reset({ env: { ...imageEnv, UPLOAD_SIGNING_SECRET: 'x'.repeat(32) } }); await inspect({ imageConfigured: true, uploadConfigured: true });
   reset({ env: { ...imageEnv, UPLOAD_SIGNING_SECRET: '한'.repeat(11) } }); await inspect({ imageConfigured: true, uploadConfigured: true });
 
-  // Rendered public output contains fixed status copy, no configuration values
-  // or records, and the route cannot initialize or mutate anything.
+  // Opening the public GET remains read-only. The fixed, explicit preparation
+  // form submits only to the separately protected POST endpoint.
   const page = load(path.join(base, 'templates/setup/route.ts'));
   assert.deepEqual(Object.keys(page).sort(), ['GET', 'dynamic', 'runtime']);
   assert.equal(page.dynamic, 'force-dynamic'); assert.equal(page.runtime, 'nodejs');
@@ -250,8 +251,36 @@ let getReadiness;
     const html = await response.text();
     for (const sentinel of sentinels) assert(!html.includes(sentinel), 'Public HTML cannot expose private fields, environment values, or SDK errors.');
     assert.match(html, /<meta name="robots" content="noindex,nofollow">/);
-    assert.doesNotMatch(html, /<(?:form|input|script)\b/i, 'Diagnostics offer no configuration or mutation action.');
+    assert.doesNotMatch(html, /<script\b/i, 'Diagnostic GET does not trigger an initialization request.');
+    if (ready) assert.doesNotMatch(html, /<form\b/i, 'Existing initialized schema does not offer preparation again.');
+    else {
+      assert.match(html, /<form\b[^>]*method=["']POST["'][^>]*action=["']\/api\/setup\/initialize["']/i, 'Explicit preparation uses the fixed protected POST endpoint.');
+      assert.match(html, /<input\b(?=[^>]*\btype=["']checkbox["'])(?=[^>]*\bname=["']confirm_new_empty["'])(?=[^>]*\bvalue=["']yes["'])(?=[^>]*\brequired\b)[^>]*>/i, 'New empty database confirmation is mandatory.');
+      assert.match(html, /<button\b[^>]*\bdisabled\b/i, 'Preparation is disabled unless DB, auth, owner bootstrap and missing schema gates all permit it.');
+    }
     assert.deepEqual(persistedSnapshot(), before); assert.deepEqual(forbidden, []);
+    checks++;
+  }
+
+  // Only connected, uninitialized databases with configured login and owner
+  // email can offer the explicit POST. Missing gates never enable it.
+  for (const [env, initialized, enabled] of [
+    [{ ...authEnv, OWNER_BOOTSTRAP_EMAIL: 'owner-private@example.test' }, false, true],
+    [{ ...authEnv }, false, false],
+    [{ OWNER_BOOTSTRAP_EMAIL: 'owner-private@example.test' }, false, false],
+    [{ ...authEnv, OWNER_BOOTSTRAP_EMAIL: 'owner-private@example.test' }, true, false],
+  ]) {
+    reset({ initialized, env });
+    const before = persistedSnapshot();
+    const html = await (await page.GET()).text();
+    const submit = html.match(/<button\b[^>]*type=["']submit["'][^>]*>/i);
+    if (initialized) assert.equal(submit, null, 'Already prepared schema offers no reinitialization.');
+    else {
+      assert(submit, 'Explicit preparation submit button exists.');
+      assert.equal(!/\bdisabled\b/i.test(submit[0]), enabled);
+    }
+    assert.deepEqual(persistedSnapshot(), before); assert.deepEqual(forbidden, []);
+    for (const sentinel of sentinels) assert(!html.includes(sentinel));
     checks++;
   }
 

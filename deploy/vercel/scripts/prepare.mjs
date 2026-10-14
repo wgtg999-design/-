@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
+import { migrationPlan, ledger } from './database-tools.mjs';
+import { writeInitializationSql } from './initialization-sql.mjs';
 
 const target=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const source=path.resolve(target,'../..');
@@ -15,6 +17,8 @@ function emailHtml(html){return html.replaceAll('/signout-with-chatgpt?return_to
 // Only these generated folders are removed. The original Sites source and
 // server runtime/templates are never edited by this build.
 for(const name of ['app','lib','public'])fs.rmSync(path.join(target,name),{recursive:true,force:true});
+const migrations=await migrationPlan();
+write('lib/initialization-plan.ts','// Generated public schema metadata; no credentials or operating records.\nexport const initializationPlan = '+JSON.stringify({ledger,migrations})+' as const;\n');
 for(const name of ['admin','commerce','content','order-sql','order-state','store']){
   const output=path.join(target,'lib',name+'.ts');
   let text=fs.readFileSync(path.join(source,'lib',name+'.ts'),'utf8');
@@ -67,6 +71,7 @@ function visit(node){
 }
 visit(parsed);for(const edit of edits.sort((a,b)=>b.start-a.start))dictionary=dictionary.slice(0,edit.start)+edit.value+dictionary.slice(edit.end);
 write('public/i18n.js',dictionary);
+await writeInitializationSql();
 for(const file of walk(path.join(target,'templates'))){
   const name=path.relative(path.join(target,'templates'),file);
   const output=name.startsWith('public'+path.sep)?name:name==='proxy.ts'?name:'app/'+name;

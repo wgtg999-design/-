@@ -5,7 +5,18 @@ const cache=new Map();function load(file){file=path.resolve(file);if(cache.has(f
 (async()=>{const admin=load('lib/admin.ts'),api=load('app/api/admin/content/route.ts'),upload=load('app/api/admin/upload/route.ts'),{defaults,contentSchema}=load('lib/content.ts');
 assert.equal(await admin.isOwner(),false);
 identity={userId:'stranger',email:'other@example.test'};assert.equal(await admin.isOwner(),false);assert.equal(owner,null);
-identity={userId:'site-owner',email:'owner@example.test'};assert.equal(await admin.isOwner(),true);assert.equal(owner,'site-owner');
+env.OWNER_BOOTSTRAP_EMAIL=' \t\n ';identity={userId:'empty-email-visitor',email:' \t\n '};
+assert.equal(await admin.isOwner(),false,'Whitespace-only bootstrap configuration must never appoint an owner');assert.equal(owner,null);
+identity={userId:'site-owner',email:'owner@example.test'};
+assert.equal(await admin.isOwner(),false,'An actual account cannot bootstrap from a whitespace-only setting');assert.equal(owner,null);
+env.OWNER_BOOTSTRAP_EMAIL=' \tOwNeR@EXAMPLE.TEST\n ';identity={userId:'stranger',email:' other@example.test '};
+assert.equal(await admin.isOwner(),false,'Normalization never authorizes an unrelated email');assert.equal(owner,null);
+identity={userId:'site-owner',email:' \tOWNER@example.test\n '};assert.equal(await admin.isOwner(),true,'Bootstrap compares trimmed, case-insensitive configured and verified account emails');assert.equal(owner,'site-owner');
+env.OWNER_BOOTSTRAP_EMAIL=' \t\n ';identity={userId:'site-owner',email:'changed@example.test'};
+assert.equal(await admin.isOwner(),true,'A pinned owner remains authorized by ID independently of bootstrap email changes');assert.equal(owner,'site-owner');
+env.OWNER_BOOTSTRAP_EMAIL=' \tOWNER@example.test\n ';identity={userId:'different-user',email:' owner@EXAMPLE.test '};
+assert.equal(await admin.isOwner(),false,'Normalized equal email must never replace the pinned owner ID');assert.equal(owner,'site-owner');
+env.OWNER_BOOTSTRAP_EMAIL='owner@example.test';
 identity={userId:'different-user',email:'owner@example.test'};assert.equal(await admin.isOwner(),false,'Pinned ID must override same email');
 const req=(body,origin='https://shop.test')=>new Request('https://shop.test/api/admin/content',{method:'PUT',headers:{origin,'content-type':'application/json'},body:JSON.stringify(body)});
 assert.equal((await api.PUT(req({content:defaults,revision:0}))).status,403);
@@ -35,5 +46,5 @@ r=await upload.POST(uploadReq(png));assert.equal(r.status,200);assert.match((awa
 assert.equal((await upload.POST(uploadReq(new Uint8Array(8*1024*1024+1)))).status,400);assert.equal(uploads,1);
 env.BUCKET.put=async()=>{throw Error('Simulated storage failure')};r=await upload.POST(uploadReq(png));assert.equal(r.status,400);assert.match((await r.json()).error,/Simulated storage failure/);
 console.log('PASS: page and upload authorization, product edit/order/hide/add readback, public hidden-product filtering, valid upload, oversized upload and storage failure;');
-console.log('PASS: owner bootstrap and pinned ID, missing/other identity denial, cross-origin denial, save/read persistence, stale-write rejection, safe image paths, duplicate IDs, invalid image rejection.');
+console.log('PASS: trimmed case-insensitive owner bootstrap, whitespace-only setting refusal, immutable pinned ID, missing/other identity denial, cross-origin denial, save/read persistence, stale-write rejection, safe image paths, duplicate IDs, invalid image rejection.');
 })().catch(e=>{console.error(e);process.exit(1)});

@@ -9,7 +9,7 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
   if (!authConfigured()) return <AuthUnavailable />;
   const account = await getClerkAccountState();
   if (account.status === 'verified') {
-    if (await getChatGPTUser()) redirect(next);
+    if (next === '/setup' || await getChatGPTUser()) redirect(next);
     return <AuthUnavailable />;
   }
   if (account.status === 'unverified') redirect(`/auth/verify-email?next=${encodeURIComponent(next)}`);

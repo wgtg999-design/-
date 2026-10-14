@@ -20,6 +20,7 @@ export async function getReadiness() {
     databaseConfigured: false, databaseConnected: false, schemaReady: false,
     catalog: 'unavailable' as 'unavailable' | 'initial-sample' | 'stored',
     legalReady: false, ownerRegistered: false,
+    ownerBootstrapConfigured: !!process.env.OWNER_BOOTSTRAP_EMAIL?.trim(),
     authConfigured: authSettingsPresent(), imageConfigured: false, uploadConfigured: false
   };
   result.imageConfigured = /^[a-f0-9]{32}$/.test(process.env.R2_ACCOUNT_ID ?? '')

@@ -9,7 +9,7 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
   if (!authConfigured()) return <AuthUnavailable />;
   const account = await getClerkAccountState();
   if (account.status === 'verified') {
-    if (await getChatGPTUser()) redirect(next);
+    if (next === '/setup' || await getChatGPTUser()) redirect(next);
     return <AuthUnavailable />;
   }
   if (account.status === 'signed-out') redirect(`/auth/sign-in?next=${encodeURIComponent(next)}`);

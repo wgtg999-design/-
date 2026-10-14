@@ -26,7 +26,7 @@ Vercel의 Turso **Connect a Project** 화면에서는 Custom Prefix를 `TURSO`, 
 
 ## 운영 연결 순서
 
-배포 후 `/setup`을 열면 비밀값 없이 상품 DB 연결·테이블 준비·로그인·관리자 기록·이미지 업로드·가입 안내 설정을 확인할 수 있습니다. 이 화면은 읽기만 하며 DB 초기화·권한 등록·데이터 저장을 하지 않습니다. 설정이 있다는 표시와 실제 운영 연결 검증은 별개입니다.
+처음 연결하는 대표님은 [버튼을 누르는 순서 안내](START-HERE.md)를 따르세요. 배포 후 `/setup`을 열면 비밀값 없이 상품 DB 연결·테이블 준비·로그인·관리자 기록·이미지 업로드·가입 안내 설정을 확인할 수 있습니다. 상태 조회는 데이터를 변경하지 않습니다. 별도의 **새 DB 준비** 버튼은 서버에 지정한 관리자 이메일과 일치하는 인증된 Clerk 계정만 사용할 수 있고, 저장 테이블이 하나라도 있으면 거부합니다. 설정이 있다는 표시와 실제 운영 연결 검증은 별개입니다.
 
 1. **새 Turso DB를 먼저 초기화**합니다. 기존 데이터가 있으면 모든 쓰기를 중단한 일관된 원본 내보내기를 받아, 새 빈 DB에만 가져옵니다. [데이터 이전 안내](DATABASE-MIGRATION.md)의 `--plan`/읽기 확인부터 진행합니다. 기존 DB를 삭제하거나 덮어쓰지 않습니다.
 2. Clerk에서 이메일·비밀번호와 필수 이메일 인증을 설정합니다. 기존 회원·관리자는 확인한 새 계정 ID와 기존 Sites ID를 명시적으로 연결합니다. 이메일이 같다는 이유로 자동 합치지 않습니다. [로그인 설정 안내](AUTH.md)를 따릅니다.
@@ -43,6 +43,10 @@ Vercel의 Turso **Connect a Project** 화면에서는 Custom Prefix를 `TURSO`, 
 
 ```sh
 node deploy/vercel/tests/auth.cjs
+node deploy/vercel/tests/readiness.cjs
+node deploy/vercel/tests/setup-auth.cjs
+node deploy/vercel/tests/initialize.mjs
+node deploy/vercel/tests/initialization-sql.mjs
 node deploy/vercel/tests/database.mjs
 node deploy/vercel/tests/storage-upload.cjs
 node deploy/vercel/tests/image-import.mjs
@@ -60,4 +64,4 @@ pnpm start --port 3901
 
 실제 서비스 키가 없으면 인증을 차단합니다. 외부 서비스 연결을 확인하지 않은 상태에서 실제 로그인·데이터 이전·운영 배포가 완료되었다고 볼 수 없습니다. Git의 코드 복구와 DB·이미지 복구는 별개이며 자동 백업·상시 감시를 설정하지 않았습니다.
 
-2026-10-14 확인: 고정된 의존성의 보안 정책 검사와 Next.js 프로덕션 빌드·TypeScript 검사가 통과했습니다. 인증 보안 테스트, DB 17개·이미지 업로드/저장 31개·이미지 이전 11개·실제 로컬 Next 서버 브라우저/API 25개 검증을 통과했습니다. 실제 Clerk 이메일 발송·비밀번호 복구·운영 DB/R2 연결과 Vercel 배포는 미검증입니다.
+2026-10-14 확인: 고정된 의존성의 보안 정책 검사와 Next.js 프로덕션 빌드·TypeScript 검사가 통과했습니다. 인증 보안 테스트, DB 17개·이미지 업로드/저장 31개·이미지 이전 11개·실제 로컬 Next 서버 브라우저/API 25개 검증을 통과했습니다. 추가로 운영 확인 화면 49개·초기 로그인 이동 84개·새 DB 준비 API 30개·빈 DB SQL 11개를 통과했습니다. 최신 로컬 Next 서버에서 준비 버튼의 비활성 조건·GET 거부·잘못된 요청 출처 거부·위조 관리자 거부·설정 없는 로그인 차단도 확인했습니다. 실제 Clerk 이메일 발송·비밀번호 복구·운영 DB/R2 연결과 Vercel 배포는 미검증입니다.
