@@ -1,5 +1,5 @@
 import { getDatabase, validateDatabaseUrl } from './database';
-import { authConfigured as authSettingsPresent } from './auth-config';
+import { authConfigured as authSettingsPresent, getAuthConfigurationStatus } from './auth-config';
 import { contentSchema } from '../lib/content';
 import { isTestSite } from './test-site';
 import { isTestPolicy } from './test-policies';
@@ -24,7 +24,8 @@ export async function getReadiness() {
     catalog: 'unavailable' as 'unavailable' | 'initial-sample' | 'stored',
     legalReady: false, ownerRegistered: false,
     ownerBootstrapConfigured: !!process.env.OWNER_BOOTSTRAP_EMAIL?.trim(),
-    authConfigured: authSettingsPresent(), imageConfigured: false, uploadConfigured: false,
+    authConfigured: authSettingsPresent(), authConfiguration: getAuthConfigurationStatus(),
+    imageConfigured: false, uploadConfigured: false,
     testMode, testPoliciesAvailable: testMode,
   };
   result.imageConfigured = /^[a-f0-9]{32}$/.test(process.env.R2_ACCOUNT_ID ?? '')

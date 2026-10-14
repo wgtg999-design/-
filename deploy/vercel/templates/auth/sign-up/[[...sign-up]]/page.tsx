@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { authConfigured, getChatGPTUser, getClerkAccountState, safeRelativeReturnPath } from '../../../../runtime/auth';
+import { getClerkPublishableKey } from '../../../../runtime/auth-config';
 import AuthUI from '../../ui';
 import AuthUnavailable from '../../unavailable';
 
@@ -10,9 +11,9 @@ export default async function SignUpPage({ searchParams }: { searchParams: Promi
   const account = await getClerkAccountState();
   if (account.status === 'verified') {
     if (next === '/setup' || await getChatGPTUser()) redirect(next);
-    return <AuthUnavailable />;
+    redirect('/setup');
   }
   if (account.status === 'unverified') redirect(`/auth/verify-email?next=${encodeURIComponent(next)}`);
   if (account.status === 'unavailable') return <AuthUnavailable />;
-  return <AuthUI mode="sign-up" next={next} publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY!} />;
+  return <AuthUI mode="sign-up" next={next} publishableKey={getClerkPublishableKey()!} />;
 }

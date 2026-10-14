@@ -7,7 +7,9 @@ const assert = require('node:assert/strict');
 const ts = require('typescript');
 const base = path.resolve(__dirname, '..');
 const savedKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+const savedAlias = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE;
 process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_setup-auth-fixture';
+delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE;
 
 let configured = true, accountStatus = 'verified', mappedUser = null;
 let accountCalls = 0, identityCalls = 0, scenarios = 0;
@@ -86,13 +88,13 @@ async function expectUnavailable(page, next, calls) {
     reset(); await expectRedirect(page, '/setup', '/setup', 0);
     assert.equal(accountCalls, 1);
 
-    // Private routes retain DB-backed identity checks, including paths that
-    // resemble /setup but are not the exact allowed public return path.
+    // Verified accounts without a usable DB identity receive the public setup
+    // diagnostic, never access to a requested private route or a fake identity.
     for (const next of ['/admin', '/account', '/signup', '/account?next=checkout', '/setup?prepare=1', '/setup#prepare', '/setup/extra', '/%73etup', '/SETUP']) {
-      reset(); await expectUnavailable(page, next, 1);
+      reset(); await expectRedirect(page, next, '/setup', 1);
     }
     const defaultPath = mode === 'sign-up' ? '/signup' : '/account';
-    reset(); await expectUnavailable(page, undefined, 1);
+    reset(); await expectRedirect(page, undefined, '/setup', 1);
     reset({ user: { userId: 'mapped-fixture-user', email: 'verified@example.test' } });
     await expectRedirect(page, undefined, defaultPath, 1);
     for (const next of ['/admin', '/account?next=checkout']) {
@@ -103,7 +105,7 @@ async function expectUnavailable(page, next, calls) {
     // An external or malformed callback never expands the diagnostic bypass
     // and cannot send the user to an attacker-provided origin.
     for (const next of ['https://evil.example.test/setup', '//evil.example.test', '/\\evil.example.test', '/%255cevil.example.test', '/auth/sign-in']) {
-      reset(); await expectUnavailable(page, next, 1);
+      reset(); await expectRedirect(page, next, '/setup', 1);
       reset({ user: { userId: 'mapped-fixture-user', email: 'verified@example.test' } });
       await expectRedirect(page, next, '/', 1);
     }
@@ -128,8 +130,26 @@ async function expectUnavailable(page, next, calls) {
       assert.equal(element.props.publishableKey, 'pk_test_setup-auth-fixture');
       assert.equal(identityCalls, 0); scenarios++;
     }
+
+    // The UI uses the same resolved public key as middleware, without writing
+    // a missing canonical variable or changing the signed-in account state.
+    delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE = 'pk_test_setup-exact-alias';
+    reset({ status: mode === 'verify-email' ? 'unverified' : 'signed-out' });
+    let result = await render(page, '/setup');
+    assert.equal(result.element?.type, AuthUI);
+    assert.equal(result.element.props.publishableKey, 'pk_test_setup-exact-alias');
+    assert.equal(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, undefined);
+    assert.equal(identityCalls, 0); scenarios++;
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_setup-auth-fixture';
+    result = await render(page, '/setup');
+    assert.equal(result.element?.type, AuthUI);
+    assert.equal(result.element.props.publishableKey, 'pk_test_setup-auth-fixture');
+    assert.equal(identityCalls, 0); scenarios++;
+    delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE;
   }
-  console.log(`PASS: ${scenarios} setup authentication callback scenarios; only verified accounts may return to the exact public /setup without DB identity lookup; private routes remain gated, external callbacks sanitized, and signed-out/unverified/unavailable states preserve their managed authentication flow.`);
+  console.log(`PASS: ${scenarios} setup authentication callback scenarios; only verified accounts may return to the exact public /setup without DB identity lookup; verified accounts with unavailable identity storage receive diagnostics, private routes remain gated, external callbacks sanitized, resolved-key UI matches canonical precedence, and signed-out/unverified/unavailable states preserve their managed authentication flow.`);
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => {
   savedKey === undefined ? delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY : process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = savedKey;
+  savedAlias === undefined ? delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE : process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE = savedAlias;
 });

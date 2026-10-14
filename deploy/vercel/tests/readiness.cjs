@@ -10,7 +10,7 @@ const { DatabaseSync } = require('node:sqlite');
 const base = path.resolve(__dirname, '..');
 const repository = path.resolve(base, '../..');
 const environmentNames = [
-  'NODE_ENV', 'NEXT_PUBLIC_SITE_URL', 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY',
+  'NODE_ENV', 'NEXT_PUBLIC_SITE_URL', 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', 'NEXT_PUBLIC_CLERK_PUBLISHABLE',
   'CLERK_SECRET_KEY', 'VERCEL_ENV', 'VERCEL_URL', 'OWNER_BOOTSTRAP_EMAIL',
   'TURSO_DATABASE_URL', 'TURSO_URL', 'TURSO_AUTH_TOKEN', 'TURSO_TOKEN',
   'TURSO_DATABASE_AUTH_TOKEN', 'TURSO_DATABASE_TOKEN', 'R2_ACCOUNT_ID',
@@ -23,12 +23,12 @@ const sentinels = [
   'owner-private@example.test', 'private-owner-user-id', 'Private diagnostic brand',
   'Private diagnostic policy text', 'sk_test_readonly-secret',
   'libsql://readonly-database.example.test', 'private-customer@example.test',
-  'private-order-id', 'private-customer-user-id',
+  'private-order-id', 'private-customer-user-id', 'pk_test_readonly-public', 'pk_test_readonly-alias',
 ];
 const fields = [
   'databaseConfigured', 'databaseConnected', 'schemaReady', 'catalog', 'legalReady',
   'ownerRegistered', 'ownerBootstrapConfigured', 'authConfigured', 'imageConfigured', 'uploadConfigured',
-  'testMode', 'testPoliciesAvailable',
+  'testMode', 'testPoliciesAvailable', 'authConfiguration',
 ].sort();
 let fixture, statements = [], forbidden = [], databaseCalls = 0, connectionFailure = false;
 let checks = 0;
@@ -141,16 +141,22 @@ const emptyStatus = {
   databaseConfigured: false, databaseConnected: false, schemaReady: false,
   catalog: 'unavailable', legalReady: false, ownerRegistered: false,
   ownerBootstrapConfigured: false,
-  authConfigured: false, imageConfigured: false, uploadConfigured: false,
+  authConfigured: false,
+  authConfiguration: { siteUrl: 'missing', publishableKey: 'missing', secretKey: 'missing', publishableKeySource: 'missing', keysMatch: false },
+  imageConfigured: false, uploadConfigured: false,
   testMode: false, testPoliciesAvailable: false,
 };
 async function inspect(expected = {}) {
   const before = persistedSnapshot();
   const value = await getReadiness();
   assert.deepEqual(Object.keys(value).sort(), fields, 'Only approved coarse diagnostic fields may be public.');
-  for (const name of fields.filter(name => name !== 'catalog')) assert.equal(typeof value[name], 'boolean', name);
+  for (const name of fields.filter(name => name !== 'catalog' && name !== 'authConfiguration')) assert.equal(typeof value[name], 'boolean', name);
+  assert.deepEqual(Object.keys(value.authConfiguration).sort(), ['keysMatch', 'publishableKey', 'publishableKeySource', 'secretKey', 'siteUrl']);
+  for (const name of ['siteUrl', 'publishableKey', 'secretKey']) assert(['missing', 'invalid', 'ready'].includes(value.authConfiguration[name]));
+  assert(['canonical', 'compatibility', 'missing'].includes(value.authConfiguration.publishableKeySource));
+  assert.equal(typeof value.authConfiguration.keysMatch, 'boolean');
   assert(['unavailable', 'initial-sample', 'stored'].includes(value.catalog));
-  for (const [name, wanted] of Object.entries(expected)) assert.equal(value[name], wanted, name);
+  for (const [name, wanted] of Object.entries(expected)) assert.deepEqual(value[name], wanted, name);
   const encoded = JSON.stringify(value);
   for (const sentinel of sentinels) assert(!encoded.includes(sentinel), 'No credentials, private content, identity, or SDK error leaks.');
   assert.deepEqual(forbidden, [], 'No writes, external service calls, or authentication/owner mutations.');
@@ -240,6 +246,23 @@ let getReadiness;
   for (const patch of [{ NEXT_PUBLIC_SITE_URL: '' }, { NEXT_PUBLIC_SITE_URL: 'http://shop.example.test' }, { NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: '' }, { CLERK_SECRET_KEY: 'invalid' }]) {
     reset({ env: { ...authEnv, ...patch } }); await inspect({ authConfigured: false });
   }
+  reset({ env: {
+    NEXT_PUBLIC_SITE_URL: authEnv.NEXT_PUBLIC_SITE_URL,
+    NEXT_PUBLIC_CLERK_PUBLISHABLE: 'pk_test_readonly-alias', CLERK_SECRET_KEY: authEnv.CLERK_SECRET_KEY,
+  } });
+  await inspect({ authConfigured: true, authConfiguration: {
+    siteUrl: 'ready', publishableKey: 'ready', secretKey: 'ready', publishableKeySource: 'compatibility', keysMatch: true,
+  } });
+  for (const [value, status] of [['', 'missing'], ['NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_readonly-public', 'invalid'], ['pk_test_readonly-public\nCLERK_SECRET_KEY=sk_test_readonly-secret', 'invalid']]) {
+    reset({ env: { ...authEnv, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: value, NEXT_PUBLIC_CLERK_PUBLISHABLE: 'pk_test_readonly-alias' } });
+    await inspect({ authConfigured: false, authConfiguration: {
+      siteUrl: 'ready', publishableKey: status, secretKey: 'ready', publishableKeySource: 'canonical', keysMatch: false,
+    } });
+  }
+  reset({ env: { ...authEnv, CLERK_SECRET_KEY: 'sk_live_readonly-secret' } });
+  await inspect({ authConfigured: false, authConfiguration: {
+    siteUrl: 'ready', publishableKey: 'ready', secretKey: 'ready', publishableKeySource: 'canonical', keysMatch: false,
+  } });
 
   const imageEnv = { R2_ACCOUNT_ID: 'a'.repeat(32), R2_ACCESS_KEY_ID: 'readonly-r2-access-key', R2_SECRET_ACCESS_KEY: 'readonly-r2-secret-key', R2_BUCKET_NAME: 'readonly-images' };
   reset({ env: imageEnv }); await inspect({ imageConfigured: true, uploadConfigured: false });
@@ -273,6 +296,13 @@ let getReadiness;
     for (const sentinel of sentinels) assert(!html.includes(sentinel), 'Public HTML cannot expose private fields, environment values, or SDK errors.');
     assert.match(html, /<meta name="robots" content="noindex,nofollow">/);
     assert.doesNotMatch(html, /<script\b/i, 'Diagnostic GET does not trigger an initialization request.');
+    assert.match(html, /Clerk 공개키 설정/);
+    assert.match(html, /Clerk 비밀키 설정/);
+    if (!ready) {
+      assert.match(html, /NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY가 없습니다/);
+      assert.match(html, /CLERK_SECRET_KEY가 없습니다/);
+      assert.match(html, /Vercel에서 표시된 연결값 수정하기/);
+    }
     if (ready) assert.doesNotMatch(html, /<form\b/i, 'Existing initialized schema does not offer preparation again.');
     else {
       assert.match(html, /<form\b[^>]*method=["']POST["'][^>]*action=["']\/api\/setup\/initialize["']/i, 'Explicit preparation uses the fixed protected POST endpoint.');

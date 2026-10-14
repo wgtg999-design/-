@@ -8,13 +8,13 @@ const { DatabaseSync } = require('node:sqlite');
 const base = path.resolve(__dirname, '..');
 const db = new DatabaseSync(':memory:');
 db.exec('CREATE TABLE auth_identity_links(provider_user_id TEXT PRIMARY KEY,legacy_user_id TEXT UNIQUE,verified_at TEXT NOT NULL);CREATE TABLE store_owner(key TEXT PRIMARY KEY,user_id TEXT NOT NULL);');
-const environmentNames = ['NODE_ENV', 'NEXT_PUBLIC_SITE_URL', 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', 'CLERK_SECRET_KEY', 'VERCEL_ENV', 'VERCEL_URL'];
+const environmentNames = ['NODE_ENV', 'NEXT_PUBLIC_SITE_URL', 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY', 'NEXT_PUBLIC_CLERK_PUBLISHABLE', 'CLERK_SECRET_KEY', 'VERCEL_ENV', 'VERCEL_URL'];
 const savedEnvironment = Object.fromEntries(environmentNames.map(name => [name, process.env[name]]));
 Object.assign(process.env, {
   NODE_ENV: 'production', NEXT_PUBLIC_SITE_URL: 'https://shop.example.test',
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: 'pk_test_synthetic', CLERK_SECRET_KEY: 'sk_test_synthetic',
 });
-delete process.env.VERCEL_ENV; delete process.env.VERCEL_URL;
+delete process.env.VERCEL_ENV; delete process.env.VERCEL_URL; delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE;
 let session = { userId: null, sessionId: null };
 let providerUser = null, providerFailure = false, databaseFailure = false;
 let calls = { auth: 0, currentUser: 0, legacyHeaders: 0, middleware: 0, revoked: [] };
@@ -61,6 +61,7 @@ function load(file) {
   return module.exports;
 }
 const auth = load(path.join(base, 'runtime/auth.ts'));
+const authConfig = load(path.join(base, 'runtime/auth-config.ts'));
 const admin = load(path.resolve(base, '../../lib/admin.ts'));
 const signout = load(path.join(base, 'templates/auth/sign-out/confirm/route.ts'));
 // Generated proxy.ts imports ./runtime; its original template relative path is
@@ -80,6 +81,88 @@ function logoutRequest({ origin = 'https://shop.example.test', url = 'https://sh
 
 (async () => {
   assert.equal(auth.authConfigured(), true);
+  let configurationScenarios = 0;
+  const expectedConfiguration = {
+    siteUrl: 'ready', publishableKey: 'ready', secretKey: 'ready',
+    publishableKeySource: 'canonical', keysMatch: true,
+  };
+  assert.deepEqual(authConfig.getAuthConfigurationStatus(), expectedConfiguration);
+  assert.equal(authConfig.getClerkPublishableKey(), 'pk_test_synthetic');
+  configurationScenarios++;
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE = 'pk_live_other-application';
+  assert.equal(authConfig.getClerkPublishableKey(), 'pk_test_synthetic', 'Canonical key wins over a conflicting alias.');
+  assert.deepEqual(authConfig.getAuthConfigurationStatus(), expectedConfiguration);
+  assert.equal(auth.authConfigured(), true);
+  configurationScenarios++;
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE = 'pk_test_exact-compatible';
+  delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  assert.equal(authConfig.getClerkPublishableKey(), 'pk_test_exact-compatible');
+  assert.deepEqual(authConfig.getAuthConfigurationStatus(), { ...expectedConfiguration, publishableKeySource: 'compatibility' });
+  assert.equal(auth.authConfigured(), true);
+  await proxyModule.exports.default({ nextUrl: new URL('https://shop.example.test/account') }, {});
+  assert.deepEqual(calls.middlewareOptions, {
+    publishableKey: 'pk_test_exact-compatible', authorizedParties: ['https://shop.example.test'],
+  }, 'The exact alias is explicitly supplied to real middleware consumers.');
+  assert.equal(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, undefined, 'Compatibility never mutates the environment.');
+  configurationScenarios++;
+  for (const invalid of ['', ' ', 'invalid', 'NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_synthetic', '"pk_test_synthetic"', "'pk_test_synthetic'", 'pk_test_synthetic"', 'pk_test_line\nsecret', 'pk_test_line\r\nnext', 'pk_test_line\tnext']) {
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = invalid;
+    assert.equal(authConfig.getClerkPublishableKey(), invalid, 'Explicit canonical values never fall through to the alias.');
+    const status = authConfig.getAuthConfigurationStatus();
+    assert.equal(status.publishableKeySource, 'canonical');
+    assert.equal(status.publishableKey, invalid === '' ? 'missing' : 'invalid');
+    assert.equal(status.keysMatch, false);
+    assert.equal(auth.authConfigured(), false);
+    const before = calls.auth;
+    assert.equal(await auth.getClerkAccountState().then(result => result.status), 'unavailable');
+    assert.equal(calls.auth, before, 'Invalid configuration never calls an identity provider.');
+    const response = await proxyModule.exports.default({ nextUrl: new URL('https://shop.example.test/auth/sign-in') }, {});
+    assert.equal(response.status, 503);
+    const body = await response.text();
+    assert.match(body, /href="\/setup"/);
+    assert.doesNotMatch(body, /pk_test|sk_test/);
+    configurationScenarios++;
+  }
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_synthetic';
+  for (const invalid of ['', 'CLERK_SECRET_KEY=sk_test_synthetic', '"sk_test_synthetic"', 'sk_test_line\nnext', 'sk_test_line\tnext']) {
+    process.env.CLERK_SECRET_KEY = invalid;
+    assert.equal(authConfig.getAuthConfigurationStatus().secretKey, invalid === '' ? 'missing' : 'invalid');
+    assert.equal(auth.authConfigured(), false);
+    configurationScenarios++;
+  }
+  process.env.CLERK_SECRET_KEY = 'sk_live_different-mode';
+  assert.deepEqual(authConfig.getAuthConfigurationStatus(), { ...expectedConfiguration, keysMatch: false });
+  assert.equal(auth.authConfigured(), false, 'A Development public key cannot be paired with a Production secret.');
+  configurationScenarios++;
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_live_matched-mode';
+  assert.equal(auth.authConfigured(), true);
+  configurationScenarios++;
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_synthetic';
+  process.env.CLERK_SECRET_KEY = 'sk_test_synthetic';
+  for (const invalid of ['', 'NEXT_PUBLIC_SITE_URL=https://shop.example.test', '"https://shop.example.test"', 'https://shop.example.test\n', 'https://shop.example.test\t']) {
+    process.env.NEXT_PUBLIC_SITE_URL = invalid;
+    assert.equal(authConfig.getAuthConfigurationStatus().siteUrl, invalid === '' ? 'missing' : 'invalid');
+    assert.equal(auth.authConfigured(), false);
+    configurationScenarios++;
+  }
+  process.env.NEXT_PUBLIC_SITE_URL = 'https://shop.example.test';
+  delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE;
+  delete process.env.CLERK_SECRET_KEY;
+  assert.deepEqual(authConfig.getAuthConfigurationStatus(), {
+    ...expectedConfiguration, publishableKey: 'missing', secretKey: 'missing',
+    publishableKeySource: 'missing', keysMatch: false,
+  });
+  assert.equal(auth.authConfigured(), false);
+  configurationScenarios++;
+  process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = 'pk_test_synthetic';
+  process.env.CLERK_SECRET_KEY = 'sk_test_synthetic';
+  assert.deepEqual(Object.keys(authConfig.getAuthConfigurationStatus()).sort(), [
+    'siteUrl', 'publishableKey', 'secretKey', 'publishableKeySource', 'keysMatch',
+  ].sort());
+  const publicStatus = JSON.stringify(authConfig.getAuthConfigurationStatus());
+  assert.doesNotMatch(publicStatus, /pk_test|sk_test|shop\.example|owner@/);
+  configurationScenarios++;
   assert.equal(auth.isTrustedOrigin('https://shop.example.test'), true);
   for (const origin of [null, 'https://evil.example.test', 'http://shop.example.test', 'https://shop.example.test/']) assert.equal(auth.isTrustedOrigin(origin), false);
   for (const unsafe of [
@@ -160,6 +243,7 @@ function logoutRequest({ origin = 'https://shop.example.test', url = 'https://sh
   assert.equal(auth.isTrustedOrigin('https://test-build.vercel.app'), true);
   await proxyModule.exports.default({ nextUrl: new URL('https://shop.example.test/account') }, {});
   assert.deepEqual(calls.middlewareOptions.authorizedParties, ['https://shop.example.test', 'https://test-build.vercel.app']);
+  assert.equal(calls.middlewareOptions.publishableKey, 'pk_test_synthetic');
   delete process.env.NEXT_PUBLIC_SITE_URL;
   assert.equal(auth.authConfigured(), false);
   assert.equal(await auth.getChatGPTUser(), null);
@@ -177,7 +261,7 @@ function logoutRequest({ origin = 'https://shop.example.test', url = 'https://sh
   delete process.env.CLERK_SECRET_KEY;
   assert.equal(await auth.getChatGPTUser(), null);
 
-  console.log('PASS: Vercel auth fails closed; managed sessions and verified primary email; spoofed Sites headers ignored; immutable explicit member/owner identity mapping; safe internal redirects; canonical origin/preview parties; POST-only bounded signout and cookie removal.');
+  console.log(`PASS: ${configurationScenarios} redacted configuration and exact public-key compatibility scenarios; Vercel auth fails closed; managed sessions and verified primary email; spoofed Sites headers ignored; immutable explicit member/owner identity mapping; safe internal redirects; canonical origin/preview parties; POST-only bounded signout and cookie removal.`);
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => {
   for (const [name, value] of Object.entries(savedEnvironment)) value === undefined ? delete process.env[name] : process.env[name] = value;
   delete globalThis.syntheticClientHeaders;
