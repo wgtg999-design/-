@@ -2,6 +2,22 @@
 
 Vinext / Cloudflare Workers. D1 holds the catalog and pinned owner identity; R2 holds uploaded product and campaign images. The original storefront layout is preserved.
 
+## 홈페이지 화면 바로 확인하기
+
+디자인을 확인할 때는 함께 전달한 `street-label-homepage.html`을 내려받아 Chrome 또는 Edge에서 여세요. CSS, 기존 화보 이미지, 시안 상품 4개가 파일 안에 들어 있어 별도 서버 설치 없이 홈페이지 화면을 볼 수 있습니다. 상품 분류·검색·가격 정렬, 상품 상세, 화보 전환과 모바일 메뉴도 확인할 수 있습니다.
+
+`legacy/store.html`은 서버가 사용하는 원본 화면 파일입니다. 이 파일만 직접 열면 서버 기준의 CSS·이미지 경로와 상품 API가 연결되지 않아 기본 글자·버튼이나 깨진 이미지가 보일 수 있습니다. 화면 미리보기에는 별도로 내보낸 파일을 사용하세요.
+
+미리보기는 원래 소스의 시안 이미지·상품을 사용합니다. 운영 중인 D1 회원·주문·상품 데이터나 R2 업로드 이미지를 복제하지 않습니다. 회원가입·주문·관리자 저장은 서버에 연결된 홈페이지에서 이용하며, 미리보기에서 완료 처리하지 않습니다. 미리보기 장바구니 저장 위치도 운영 장바구니와 구분합니다.
+
+설치된 개발 환경의 저장소 루트에서 미리보기를 다시 만들려면 다음 명령을 실행합니다.
+
+```sh
+node scripts/export-preview.cjs
+```
+
+기본 출력 위치는 저장소 옆 `outputs/street-label-homepage.html`입니다. 서버용 소스의 CSS·JS·이미지나 인증·API 설정을 수정하지 않고 미리보기를 생성합니다.
+
 ## Use
 Open the storefront with the owning ChatGPT account. Click **관리자 모드** in the header or footer, or visit `/admin`. Edit brand text, campaign images, journal image and product details. Add/hide/remove/reorder products. Click **변경사항 저장**, then refresh the storefront. Uploads support JPG, PNG and WebP, at most 8MB each. Hero images: 1–5; products: up to 100. New products start hidden.
 
