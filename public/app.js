@@ -13,9 +13,6 @@
   const mobile = matchMedia('(max-width: 800px)');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
-  // Only confirmed photos for the exact product ID belong here. Missing
-  // photos keep the original product image; never substitute another outfit.
-  const PRODUCT_LOOKS = {};
   const campaign = $('.hero'), sidebar = $('#site-sidebar');
   let campaignVisible = true;
   function updateSidebarBackground() { sidebar.classList.toggle('hero-overlay', campaignVisible && !mobile.matches); }
@@ -43,22 +40,31 @@
     return option?.enabled ? Math.max(0, Math.min(option.stock, option.maxOrder, 99)) : 0;
   }
   function photo(product, isDetail = false) {
-    const look = Object.hasOwn(PRODUCT_LOOKS, product.id) ? PRODUCT_LOOKS[product.id] : null;
-    const source = look && /^\/assets\/[a-zA-Z0-9._-]+$/.test(look.image) ? imageUrl(look.image) : '';
-    const model = source ? `<img class="packshot-model-layer" src="${esc(source)}" data-focus="${look.focus === 'lower' ? 'lower' : 'upper'}" alt="" aria-hidden="true" loading="${isDetail ? 'eager' : 'lazy'}" decoding="async">` : '';
+    // A second photo belongs to this product's saved content. Never infer an
+    // outfit from its name, position in the list, or an unrelated lookbook.
+    const source = /^\/(assets\/[a-zA-Z0-9._-]+|media\/[a-f0-9-]+\.(png|jpg|webp))$/.test(product.modelImage || '') ? imageUrl(product.modelImage) : '';
+    const focus = ['upper','lower'].includes(product.modelFocus) ? product.modelFocus : 'center';
+    const model = source ? `<img class="packshot-model-layer" src="${esc(source)}" data-focus="${focus}" alt="" aria-hidden="true" loading="${isDetail ? 'eager' : 'lazy'}" decoding="async">` : '';
     return `<div class="product-photo packshot ${product.image === '/assets/products.png' ? product.crop : 'custom-photo'}" style="background-image:url('${esc(imageUrl(product.image))}')" role="img" aria-label="${esc(label(product, 'name'))}"><span class="packshot-stage" aria-hidden="true"></span>${model}<span class="product-index">${String(products.indexOf(product) + 1).padStart(2, '0')}</span></div>`;
   }
   function bindModelPhotos(root) {
     root.querySelectorAll('.packshot-model-layer').forEach(image => {
       const holder = image.closest('.product-photo');
+      const views = image.closest('.detail-gallery')?.querySelector('.detail-photo-views');
       let checking = false;
-      const failed = () => { holder.classList.remove('has-model', 'is-model-ready'); image.remove(); };
+      const failed = () => {
+        holder.classList.remove('has-model', 'is-model-ready', 'show-model'); image.remove();
+        if (views) views.hidden = true;
+      };
       const ready = async () => {
         if (checking || !image.complete || !image.naturalWidth) return;
         checking = true;
         try {
           if (image.decode) await image.decode();
-          if (image.isConnected && image.naturalWidth) holder.classList.add('has-model', 'is-model-ready');
+          if (image.isConnected && image.naturalWidth) {
+            holder.classList.add('has-model', 'is-model-ready');
+            if (views) views.hidden = false;
+          }
         } catch { failed(); }
       };
       image.addEventListener('load', ready, {once:true});
@@ -82,7 +88,7 @@
     if (sort !== 'default') list.sort((a, b) => sort === 'low' ? a.price - b.price : b.price - a.price);
     const title = $('.section-title h2'); title.removeAttribute('data-i18n');
     title.textContent = t(view === 'best' ? 'shop.bestTitle' : view === 'wishlist' ? 'shop.wishlistTitle' : 'shop.productTitle');
-    $('#products').innerHTML = list.map(product => `<article class="product-card"><button class="product" data-product="${esc(product.id)}" aria-label="${esc(t('shop.detailAria',{name:label(product,'name')}))}">${photo(product)}<div class="product-meta"><div><h3>${esc(label(product,'name'))}</h3><small>${esc(label(product,'color'))}</small>${product.sizes.some(size => purchaseLimit(product.id,size) > 0) ? '' : `<small>${esc(t('product.soldOut'))}</small>`}</div><p>${money(product.price)}</p></div></button>${favoriteButton(product)}</article>`).join('');
+    $('#products').innerHTML = list.map(product => `<article class="product-card"><button class="product" data-product="${esc(product.id)}" aria-label="${esc(t('shop.detailAria',{name:label(product,'name')}))}">${photo(product)}<div class="product-meta"><div><h3>${esc(label(product,'name'))}</h3><small>${esc(label(product,'color'))}</small>${product.sizes.some(size => purchaseLimit(product.id,size) > 0) ? '' : `<small>${esc(t('product.soldOut'))}</small>`}</div><p>${money(product.price)}</p></div></button>${favoriteButton(product)}<div class="quick-add-placement"><button class="quick-add" type="button" data-quick-add="${esc(product.id)}" aria-label="${esc(t('product.quickAddAria',{name:label(product,'name')}))}">${esc(t('product.quickAdd'))}<span aria-hidden="true">+</span></button></div></article>`).join('');
     bindModelPhotos($('#products'));
     $('#empty').hidden = list.length > 0;
     const message = view === 'best' && !products.some(product => product.featured === true) ? 'shop.bestEmpty'
@@ -105,11 +111,14 @@
     persist(wishlistKey, [...favorites]); render();
     if ($('#product-dialog').open && currentProduct === id) renderProduct(id, $('#size')?.value);
   }
+  function detailGallery(product) {
+    return `<div class="detail-gallery">${photo(product, true)}<div class="detail-photo-views" role="group" aria-label="${esc(t('product.photoViews'))}" hidden><button type="button" data-photo-view="product" aria-pressed="true">${esc(t('product.packshot'))}</button><button type="button" data-photo-view="model" aria-pressed="false">${esc(t('product.modelPhoto'))}</button></div></div>`;
+  }
   function renderProduct(id, selectedSize = '') {
     const product = products.find(item => item.id === id); if (!product) return;
     const description = label(product, 'description'), sizeGuide = label(product, 'sizeGuide');
     const originalNote = I.getLanguage() !== 'ko' && !product.translations?.[I.getLanguage()]?.description;
-    $('#product-detail').innerHTML = `<div class="detail-layout">${photo(product, true)}<div class="detail-copy"><p class="muted">${esc(t('home.collection'))}</p><h2>${esc(label(product,'name'))}</h2><p>${esc(label(product,'color'))}<br>${money(product.price)}</p><p style="white-space:pre-line">${esc(description)}</p>${originalNote ? `<p class="muted">${esc(t('shop.originalText'))}</p>` : ''}<label for="size">${esc(t('product.size'))}</label><select id="size"><option value="">${esc(t('product.chooseSize'))}</option>${product.sizes.map(size => {
+    $('#product-detail').innerHTML = `<div class="detail-layout">${detailGallery(product)}<div class="detail-copy"><p class="muted">${esc(t('home.collection'))}</p><h2>${esc(label(product,'name'))}</h2><p>${esc(label(product,'color'))}<br>${money(product.price)}</p><p style="white-space:pre-line">${esc(description)}</p>${originalNote ? `<p class="muted">${esc(t('shop.originalText'))}</p>` : ''}<label for="size">${esc(t('product.size'))}</label><select id="size"><option value="">${esc(t('product.chooseSize'))}</option>${product.sizes.map(size => {
       const limit = purchaseLimit(id, size);
       return `<option value="${esc(size)}" ${limit ? '' : 'disabled'} ${size === selectedSize ? 'selected' : ''}>${esc(size)} · ${esc(limit ? t('product.maxQuantity',{count:limit}) : t('product.soldOut'))}</option>`;
     }).join('')}</select><button class="primary" id="add" type="button">${esc(t('product.addToBag'))}</button><p id="size-error" role="alert"></p><button class="size-guide-toggle" id="size-guide" type="button" aria-expanded="false" aria-controls="size-guide-content">${esc(t('product.sizeGuide'))} +</button><div id="size-guide-content" class="size-guide-content" hidden>${sizeGuide ? `<p style="white-space:pre-line">${esc(sizeGuide)}</p>${I.getLanguage() !== 'ko' && !product.translations?.[I.getLanguage()]?.sizeGuide ? `<p class="muted">${esc(t('shop.originalText'))}</p>` : ''}` : `<p>${esc(t('product.sizeGuideEmpty'))}</p><p>${esc(t('product.measureIntro'))}</p><ul><li>${esc(t('product.measureShoulder'))}</li><li>${esc(t('product.measureChest'))}</li><li>${esc(t('product.measureLength'))}</li></ul><p class="muted">${esc(t('product.measureNote'))}</p>`}</div><button class="save-product" type="button" data-wishlist="${esc(id)}" aria-pressed="${favorites.has(id)}">${esc(t(favorites.has(id) ? 'product.unsave' : 'product.save'))}</button><div class="sizes">${esc(t('product.paymentNote'))}</div></div></div>`;
@@ -352,6 +361,19 @@
     const service = event.target.closest('[data-preview-service]');
     if (service && preview) { event.preventDefault(); showInfo('preview'); return; }
     const favorite = event.target.closest('[data-wishlist]'); if (favorite) { toggleFavorite(favorite.dataset.wishlist); return; }
+    const photoView = event.target.closest('[data-photo-view]');
+    if (photoView) {
+      const gallery = photoView.closest('.detail-gallery'), holder = gallery.querySelector('.product-photo');
+      if (!holder.classList.contains('is-model-ready')) return;
+      const model = photoView.dataset.photoView === 'model';
+      holder.classList.toggle('show-model', model);
+      gallery.querySelectorAll('[data-photo-view]').forEach(button => button.setAttribute('aria-pressed', String(button === photoView)));
+      const product = products.find(item => item.id === currentProduct);
+      holder.setAttribute('aria-label', label(product,'name') + ' — ' + t(model ? 'product.modelPhoto' : 'product.packshot'));
+      return;
+    }
+    const quickAdd = event.target.closest('[data-quick-add]');
+    if (quickAdd) { openProduct(quickAdd.dataset.quickAdd); $('#size').focus(); return; }
     const product = event.target.closest('[data-product]'); if (product) { openProduct(product.dataset.product); return; }
     const slide = event.target.closest('[data-slide]'); if (slide && content) { changeHeroSlide(Number(slide.dataset.slide)); syncHeroTimer(); return; }
     const language = event.target.closest('[data-set-language]'); if (language) { I.setLanguage(language.dataset.setLanguage); $('#language-dialog').close(); return; }

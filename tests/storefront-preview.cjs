@@ -143,7 +143,9 @@ async function closeSidebarIfOpen(page) {
       });
 
       await check(`${width}px: product details and cart show unconnected stock without pretending to accept an order`, async () => {
-        await page.locator('[data-product=jacket]').click();
+        // Browse the photo itself; the separate quick-add overlay deliberately
+        // opens the same dialog at its size picker on small touch screens.
+        await page.locator('[data-product=jacket] .product-photo').click();
         assert.equal(await page.locator('#product-dialog').evaluate(dialog => dialog.open), true);
         assert.equal(await page.locator('#size option:disabled').count(), 3);
         await page.locator('#add').click();

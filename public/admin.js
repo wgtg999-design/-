@@ -16,6 +16,7 @@ function busyState(value){
     const action=element.dataset.action,index=Number(element.dataset.index),list=action.startsWith('hero')?content?.heroImages:content?.products;
     if(list)element.disabled=value||(action.endsWith('up')&&index===0)||(action.endsWith('down')&&index===list.length-1);
   });
+  document.querySelectorAll('[data-key="modelFocus"]').forEach(element=>element.disabled=value||!content?.products[Number(element.dataset.product)]?.modelImage);
 }
 async function api(path,options){
   const response=await fetch(path,{cache:'no-store',...options});
@@ -51,9 +52,13 @@ function renderBrandTranslations(){
   $('#brand-translations').innerHTML=translatedFields(content,brandLocale,brandFields);
 }
 function productLocale(product){return productLocales.get(product.id)||'zh-CN'}
+function modelPhoto(product,index){
+  const focus=product.modelFocus||'center';
+  return `<div class="model-photo-editor"><h3>착용 사진 (선택)</h3>${product.modelImage?`<img class="model-photo-preview" src="${esc(product.modelImage)}" data-focus="${esc(focus)}" alt="${esc(product.name)} 착용 사진">`:'<p class="model-photo-empty">착용 사진을 등록하면 상품에 커서를 올릴 때 이 사진으로 전환됩니다.</p>'}<div class="visual-actions"><label class="button">${product.modelImage?'착용 사진 교체':'착용 사진 등록'}<input type="file" hidden accept="image/jpeg,image/png,image/webp" data-upload="model" data-index="${index}"></label>${product.modelImage?`<button type="button" data-action="model-remove" data-index="${index}">착용 사진 제거</button>`:''}</div><label class="model-focus-label">착용 사진 중심<select data-product="${index}" data-key="modelFocus" ${product.modelImage?'':'disabled'}>${[['center','전체 · 중앙'],['upper','상의 중심'],['lower','하의 중심']].map(([value,label])=>`<option value="${value}" ${focus===value?'selected':''}>${label}</option>`).join('')}</select></label><p class="editor-help">이 상품을 실제로 착용한 사진을 올려 주세요. JPG·PNG·WebP, 최대 8MB. 저장 후 홈페이지에 반영됩니다.</p></div>`;
+}
 function productCard(product,index){
   const locale=productLocale(product);
-  return `<article class="product-card"><div class="product-photo"><div class="photo ${product.image==='/assets/products.png'?'sheet '+product.crop:''}" style="background-image:url('${esc(product.image)}')" role="img" aria-label="상품 사진"></div><div class="visual-actions"><label class="button">사진 교체<input type="file" hidden accept="image/jpeg,image/png,image/webp" data-upload="product" data-index="${index}"></label></div></div><div class="product-fields">
+  return `<article class="product-card"><div class="product-photo"><h3>기본 상품 사진</h3><div class="photo ${product.image==='/assets/products.png'?'sheet '+product.crop:''}" style="background-image:url('${esc(product.image)}')" role="img" aria-label="상품 사진"></div><div class="visual-actions"><label class="button">사진 교체<input type="file" hidden accept="image/jpeg,image/png,image/webp" data-upload="product" data-index="${index}"></label></div>${modelPhoto(product,index)}</div><div class="product-fields">
 <label>상품명<input data-product="${index}" data-key="name" value="${esc(product.name)}" maxlength="100"></label>
 <label>가격 (원)<input type="number" min="0" max="100000000" step="1" data-product="${index}" data-key="price" value="${product.price}"></label>
 <label>색상<input data-product="${index}" data-key="color" value="${esc(product.color)}" maxlength="50"></label>
@@ -100,6 +105,13 @@ document.addEventListener('input',event=>{
       if(setTranslation(product,element.dataset.locale,key,element.value,productFields))mark();
       return;
     }
+    if(key==='modelFocus'){
+      if(!product.modelImage||!['upper','lower','center'].includes(element.value))return;
+      product.modelFocus=element.value;
+      const preview=element.closest('.product-card').querySelector('.model-photo-preview');
+      if(preview)preview.dataset.focus=element.value;
+      mark();return;
+    }
     product[key]=key==='price'?Number(element.value):['visible','featured'].includes(key)?element.checked:key==='sizes'?element.value.split(',').map(size=>size.trim()).filter(Boolean):element.value;
     mark();
   }
@@ -114,6 +126,9 @@ document.addEventListener('click',event=>{
   }else if(action==='hero-remove'){
     if(content.heroImages.length===1){status('메인 사진은 최소 1장이 필요합니다.',true);return}
     content.heroImages.splice(index,1);
+  }else if(action==='model-remove'){
+    const product=content.products[index];if(!product)return;
+    delete product.modelImage;delete product.modelFocus;
   }else{
     const list=action.startsWith('hero')?content.heroImages:content.products,next=index+(action.endsWith('up')?-1:1);
     if(next<0||next>=list.length)return;
@@ -140,6 +155,8 @@ document.addEventListener('change',async event=>{
   if(!element.dataset.upload||!element.files?.[0])return;
   const file=element.files[0];element.value='';
   const type=element.dataset.upload,index=element.dataset.index===undefined?null:Number(element.dataset.index);
+  if(!['hero','journal','product','model'].includes(type))return;
+  if(['product','model'].includes(type)&&!content.products[index])return;
   if(file.size>8*1024*1024){status('사진은 8MB 이하로 올려주세요.',true);return}
   if(type==='hero'&&index===null&&content.heroImages.length>=5){status('메인 사진은 최대 5장까지 등록할 수 있습니다.',true);return}
   busyState(true);status('사진을 업로드하고 있습니다…');
@@ -147,6 +164,7 @@ document.addEventListener('change',async event=>{
     const data=await api('/api/admin/upload',{method:'POST',headers:{'Content-Type':file.type},body:file});
     if(type==='hero'){if(index===null)content.heroImages.push(data.url);else content.heroImages[index]=data.url}
     else if(type==='journal')content.journalImage=data.url;
+    else if(type==='model'){content.products[index].modelImage=data.url;content.products[index].modelFocus??='center'}
     else{content.products[index].image=data.url;content.products[index].crop=''}
     mark();render();status('사진 업로드 완료. 변경사항 저장을 누르면 홈페이지에 반영됩니다.');
   }catch(error){status(error.message,true)}finally{busyState(false)}
