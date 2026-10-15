@@ -47,11 +47,15 @@
     <h1 class="sr-only">YOUR LABEL — Collection 001</h1>
     <section class="hero" aria-label="컬렉션 룩북">
       <img id="hero-photo" src="/assets/campaign-wide.png" alt="스테인리스 공간에서 촬영한 세 모델의 가로형 AI 패션 캠페인" fetchpriority="high">
+      <img id="hero-photo-next" src="/assets/campaign-wide.png" alt="" aria-hidden="true" hidden>
       <p class="notice">COLLECTION 001 — INDEPENDENT UNIFORM</p>
       <div class="campaign-caption"><span data-i18n="home.collection">COLLECTION 001</span><a href="#shop" data-i18n="home.discover">DISCOVER ↗</a></div>
-      <div class="hero-pagination" role="group" aria-label="룩북 이미지 선택" data-i18n-aria-label="home.photoSelect">
-        <button class="selected" data-slide="0" aria-label="첫 번째 룩북" aria-pressed="true" data-i18n-aria-label="home.firstSlide"></button>
-        <button data-slide="1" aria-label="두 번째 룩북" aria-pressed="false" data-i18n-aria-label="home.secondSlide"></button>
+      <div class="hero-controls">
+        <div class="hero-pagination" role="group" aria-label="룩북 이미지 선택" data-i18n-aria-label="home.photoSelect">
+          <button class="selected" data-slide="0" aria-label="첫 번째 룩북" aria-pressed="true" data-i18n-aria-label="home.firstSlide"></button>
+          <button data-slide="1" aria-label="두 번째 룩북" aria-pressed="false" data-i18n-aria-label="home.secondSlide"></button>
+        </div>
+        <button id="hero-toggle" type="button" aria-label="배너 자동 전환 일시정지" data-i18n-aria-label="home.pauseSlideshow"><span aria-hidden="true">Ⅱ</span></button>
       </div>
     </section>
 

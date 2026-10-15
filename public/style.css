@@ -33,13 +33,17 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 
 .hero{width:calc(100% + var(--store-rail));margin-left:calc(-1 * var(--store-rail));height:100vh;height:100svh;min-height:540px;max-height:1400px;position:relative;background:#ddd;overflow:hidden}
 .hero>img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+.hero>#hero-photo-next{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .4s ease}
+.hero>#hero-photo-next.is-entering{opacity:1}
 .hero .notice{position:absolute;top:22px;right:28px;left:calc(var(--store-rail) + 28px);margin:0;text-align:right;font-size:8px;line-height:1.8;letter-spacing:.9px;color:#151515;text-shadow:0 1px 3px #ffffff80;overflow-wrap:anywhere}
 .campaign-caption{position:absolute;bottom:29px;left:calc(var(--store-rail) + 28px);right:28px;display:flex;justify-content:space-between;gap:18px;color:#151515;font-size:9px;letter-spacing:1.2px;text-shadow:0 1px 3px #ffffff80}
 .campaign-caption a{min-height:32px;display:flex;align-items:center;margin-top:-12px}
-.hero-pagination{display:flex;gap:8px;position:absolute;bottom:15px;left:calc(50% + var(--store-rail) / 2);transform:translateX(-50%)}
+.hero-controls{display:flex;align-items:center;gap:4px;position:absolute;z-index:1;bottom:15px;left:calc(50% + var(--store-rail) / 2);transform:translateX(-50%)}
+.hero-pagination{display:flex;gap:8px}
 .hero-pagination button{width:44px;height:44px;padding:0;display:grid;place-items:center}
-.hero-pagination button:after{content:'';width:6px;height:6px;border-radius:50%;background:#15151550}
-.hero-pagination button.selected:after{background:#151515}
+.hero-pagination button:after{content:'';width:6px;height:6px;border-radius:50%;background:#15151550;transition:transform .3s ease,background-color .3s ease}
+.hero-pagination button.selected:after{background:#151515;transform:scale(1.25)}
+#hero-toggle{display:grid;place-items:center;width:44px;height:44px;padding:0;color:#151515;font-size:12px;text-shadow:0 1px 3px #ffffff80}
 
 .shop{padding:62px 28px 85px}
 .section-title,.editorial-heading{display:flex;justify-content:space-between;align-items:center;gap:18px}
@@ -54,18 +58,29 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .products{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:31px 10px}
 .product-card{position:relative;min-width:0}
 .product{padding:0;text-align:left;display:block;width:100%;min-width:0}
-.product-photo.packshot{width:100%;height:auto;aspect-ratio:1;background-image:url('assets/products.png');background-size:200% 200%;background-position:left top;background-repeat:no-repeat;background-color:#e4e3e1;position:relative;transition:filter .25s}
+.product-photo.packshot{width:100%;height:auto;aspect-ratio:1;background-image:url('assets/products.png');background-size:200% 200%;background-position:left top;background-repeat:no-repeat;background-color:#e4e3e1;position:relative;overflow:hidden;isolation:isolate}
 .product-photo.packshot.right{background-position:right top}
 .product-photo.packshot.bottom{background-position:left bottom}
 .product-photo.packshot.bottom.right{background-position:right bottom}
 .packshot.custom-photo{background-size:cover;background-position:center}
-.product:hover .packshot{filter:brightness(.97)}
-.product-index{position:absolute;left:11px;top:11px;font-size:8px;color:#777}
+.packshot-stage{position:absolute;inset:0;background-image:inherit;background-size:inherit;background-position:inherit;background-repeat:inherit;transform:scale(1);transform-origin:center;transition:transform .4s cubic-bezier(.22,1,.36,1),opacity .4s ease}
+.packshot-model-layer{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;opacity:0;transform:scale(1.04);transform-origin:50% 40%;transition:opacity .4s ease,transform .4s cubic-bezier(.22,1,.36,1);pointer-events:none;z-index:1}
+.packshot-model-layer[data-focus="upper"]{object-position:center 24%;transform-origin:50% 38%}
+.packshot-model-layer[data-focus="lower"]{object-position:center 78%;transform-origin:50% 68%}
+.product:focus-visible .packshot-stage{transform:scale(1.5)}
+.product:focus-visible .is-model-ready .packshot-stage{opacity:.15}
+.product:focus-visible .is-model-ready .packshot-model-layer{opacity:1;transform:scale(1.5)}
+@media(hover:hover) and (pointer:fine){
+  .product:hover .packshot-stage{transform:scale(1.5)}
+  .product:hover .is-model-ready .packshot-stage{opacity:.15}
+  .product:hover .is-model-ready .packshot-model-layer{opacity:1;transform:scale(1.5)}
+}
+.product-index{position:absolute;left:11px;top:11px;font-size:8px;color:#777;z-index:2}
 .product-meta{display:block;padding:15px 3px 0;line-height:1.7;min-width:0}
 .product-meta h3{font-size:11px;font-weight:400;letter-spacing:.1px;margin:0;overflow-wrap:anywhere}
 .product-meta small{display:block;font-size:9px;color:#888;margin-top:3px;letter-spacing:.3px}
 .product-meta p{font-size:11px;margin:7px 0 0;font-variant-numeric:tabular-nums}
-.wishlist-toggle{position:absolute;right:5px;top:5px;width:44px;min-height:44px;z-index:1;display:grid;place-items:center;font-size:20px;color:#151515;background:#ffffffdf}
+.wishlist-toggle{position:absolute;right:5px;top:5px;width:44px;min-height:44px;z-index:3;display:grid;place-items:center;font-size:20px;color:#151515;background:#ffffffdf}
 .wishlist-toggle[aria-pressed=true]{background:#fff}
 .wishlist-toggle svg{width:18px;height:18px;stroke:currentColor;stroke-width:1.2;fill:none}
 .wishlist-toggle[aria-pressed=true] svg{fill:currentColor}
@@ -109,12 +124,18 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .admin-footer{font-size:11px;text-decoration:underline}
 
 dialog{border:0;padding:45px 32px;max-width:900px;width:calc(100% - 36px);max-height:90svh;overflow:auto;color:#151515;background:#fff}
+#product-dialog[open]{animation:product-modal-enter .4s cubic-bezier(.22,1,.36,1)}
+@keyframes product-modal-enter{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
 dialog::backdrop{background:#0008}
 .close{position:absolute;right:10px;top:8px;font-size:20px;width:44px;min-height:44px;padding:10px}
 body:has(dialog[open]){overflow:hidden}
 body.menu-is-open{overflow:hidden}
 .detail-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:30px}
 .detail-layout .product-photo.packshot{height:auto;aspect-ratio:1;align-self:start}
+.detail-layout .is-model-ready .packshot-stage{opacity:0}
+.detail-layout .is-model-ready .packshot-model-layer{opacity:1;transform:scale(1);animation:detail-model-enter .4s ease}
+@keyframes detail-model-enter{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:scale(1)}}
+@media(hover:hover) and (pointer:fine){.detail-layout .is-model-ready:hover .packshot-model-layer{transform:scale(1.5)}}
 .detail-copy{min-width:0}
 .detail-copy h2{font-size:22px;font-weight:400;line-height:1.4;overflow-wrap:anywhere}
 .detail-copy p{line-height:1.9}
@@ -177,7 +198,8 @@ body.menu-is-open{overflow:hidden}
   .hero .notice{top:17px;left:17px;right:17px;font-size:7px;letter-spacing:.5px}
   .campaign-caption{left:17px;right:17px;bottom:24px;font-size:8px;letter-spacing:.9px}
   .campaign-caption a{min-height:44px}
-  .hero-pagination{bottom:4px;gap:0}
+  .hero-controls{bottom:4px;gap:0}
+  .hero-pagination{gap:0}
   .shop{padding:40px 14px 53px}
   .section-title h2{font-size:11px}
   .section-title>span{font-size:7px}
@@ -211,4 +233,4 @@ body.menu-is-open{overflow:hidden}
   #toast{left:50%;width:max-content;max-width:calc(100% - 32px);font-size:11px}
 }
 @media(max-width:380px){.mobile-bar{gap:8px;padding:0 12px}.mobile-logo{font-size:22px;max-width:calc(100% - 128px)}.filters{gap:12px}.sort{font-size:8px}.sort select{font-size:9px}.section-title>span{font-size:6px}.campaign-caption{font-size:7px}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}.product:hover .packshot-stage,.product:focus-visible .packshot-stage,.product:hover .is-model-ready .packshot-model-layer,.product:focus-visible .is-model-ready .packshot-model-layer,.detail-layout .is-model-ready:hover .packshot-model-layer{transform:none}}

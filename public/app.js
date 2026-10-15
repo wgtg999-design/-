@@ -11,15 +11,23 @@
   const cartKey = preview ? 'your-label-preview-cart' : 'your-label-cart';
   const wishlistKey = preview ? 'your-label-preview-wishlist' : 'your-label-wishlist';
   const mobile = matchMedia('(max-width: 800px)');
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
+  // Only confirmed photos for the exact product ID belong here. Missing
+  // photos keep the original product image; never substitute another outfit.
+  const PRODUCT_LOOKS = {};
   const campaign = $('.hero'), sidebar = $('#site-sidebar');
   let campaignVisible = true;
   function updateSidebarBackground() { sidebar.classList.toggle('hero-overlay', campaignVisible && !mobile.matches); }
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver(entries => { campaignVisible = entries[0].isIntersecting; updateSidebarBackground(); }, {threshold:0}).observe(campaign);
+    new IntersectionObserver(entries => { campaignVisible = entries[0].isIntersecting; updateSidebarBackground(); syncHeroTimer(); }, {threshold:0}).observe(campaign);
   }
   let inventory = [], products = [], category = 'ALL', search = '', sort = 'default';
   let cart = [], favorites = new Set(), content = null, view = 'all', currentProduct = null;
   let currentInfo = null, currentSlide = 0, toastTimer;
+  let heroTimer = null, heroTransitionTimer = null, heroRequest = 0;
+  let heroPaused = false, heroHovered = false, heroFocused = false, heroInitialized = false;
+  const heroLoads = new Map(), failedHeroSources = new Set();
   let shopSettings = {accepting:false, shippingFee:0, bankInfo:'', support:'', terms:'', privacy:'', returnGuide:''};
 
   function stored(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; } }
@@ -34,8 +42,29 @@
     const option = stockFor(id, size);
     return option?.enabled ? Math.max(0, Math.min(option.stock, option.maxOrder, 99)) : 0;
   }
-  function photo(product) {
-    return `<div class="product-photo packshot ${product.image === '/assets/products.png' ? product.crop : 'custom-photo'}" style="background-image:url('${esc(imageUrl(product.image))}')" role="img" aria-label="${esc(label(product, 'name'))}"><span class="product-index">${String(products.indexOf(product) + 1).padStart(2, '0')}</span></div>`;
+  function photo(product, isDetail = false) {
+    const look = Object.hasOwn(PRODUCT_LOOKS, product.id) ? PRODUCT_LOOKS[product.id] : null;
+    const source = look && /^\/assets\/[a-zA-Z0-9._-]+$/.test(look.image) ? imageUrl(look.image) : '';
+    const model = source ? `<img class="packshot-model-layer" src="${esc(source)}" data-focus="${look.focus === 'lower' ? 'lower' : 'upper'}" alt="" aria-hidden="true" loading="${isDetail ? 'eager' : 'lazy'}" decoding="async">` : '';
+    return `<div class="product-photo packshot ${product.image === '/assets/products.png' ? product.crop : 'custom-photo'}" style="background-image:url('${esc(imageUrl(product.image))}')" role="img" aria-label="${esc(label(product, 'name'))}"><span class="packshot-stage" aria-hidden="true"></span>${model}<span class="product-index">${String(products.indexOf(product) + 1).padStart(2, '0')}</span></div>`;
+  }
+  function bindModelPhotos(root) {
+    root.querySelectorAll('.packshot-model-layer').forEach(image => {
+      const holder = image.closest('.product-photo');
+      let checking = false;
+      const failed = () => { holder.classList.remove('has-model', 'is-model-ready'); image.remove(); };
+      const ready = async () => {
+        if (checking || !image.complete || !image.naturalWidth) return;
+        checking = true;
+        try {
+          if (image.decode) await image.decode();
+          if (image.isConnected && image.naturalWidth) holder.classList.add('has-model', 'is-model-ready');
+        } catch { failed(); }
+      };
+      image.addEventListener('load', ready, {once:true});
+      image.addEventListener('error', failed, {once:true});
+      if (image.complete) { if (image.naturalWidth) ready(); else failed(); }
+    });
   }
   function favoriteButton(product) {
     const selected = favorites.has(product.id);
@@ -54,6 +83,7 @@
     const title = $('.section-title h2'); title.removeAttribute('data-i18n');
     title.textContent = t(view === 'best' ? 'shop.bestTitle' : view === 'wishlist' ? 'shop.wishlistTitle' : 'shop.productTitle');
     $('#products').innerHTML = list.map(product => `<article class="product-card"><button class="product" data-product="${esc(product.id)}" aria-label="${esc(t('shop.detailAria',{name:label(product,'name')}))}">${photo(product)}<div class="product-meta"><div><h3>${esc(label(product,'name'))}</h3><small>${esc(label(product,'color'))}</small>${product.sizes.some(size => purchaseLimit(product.id,size) > 0) ? '' : `<small>${esc(t('product.soldOut'))}</small>`}</div><p>${money(product.price)}</p></div></button>${favoriteButton(product)}</article>`).join('');
+    bindModelPhotos($('#products'));
     $('#empty').hidden = list.length > 0;
     const message = view === 'best' && !products.some(product => product.featured === true) ? 'shop.bestEmpty'
       : view === 'wishlist' && !favorites.size ? 'shop.wishlistEmpty' : 'shop.noMatches';
@@ -79,10 +109,11 @@
     const product = products.find(item => item.id === id); if (!product) return;
     const description = label(product, 'description'), sizeGuide = label(product, 'sizeGuide');
     const originalNote = I.getLanguage() !== 'ko' && !product.translations?.[I.getLanguage()]?.description;
-    $('#product-detail').innerHTML = `<div class="detail-layout">${photo(product)}<div class="detail-copy"><p class="muted">${esc(t('home.collection'))}</p><h2>${esc(label(product,'name'))}</h2><p>${esc(label(product,'color'))}<br>${money(product.price)}</p><p style="white-space:pre-line">${esc(description)}</p>${originalNote ? `<p class="muted">${esc(t('shop.originalText'))}</p>` : ''}<label for="size">${esc(t('product.size'))}</label><select id="size"><option value="">${esc(t('product.chooseSize'))}</option>${product.sizes.map(size => {
+    $('#product-detail').innerHTML = `<div class="detail-layout">${photo(product, true)}<div class="detail-copy"><p class="muted">${esc(t('home.collection'))}</p><h2>${esc(label(product,'name'))}</h2><p>${esc(label(product,'color'))}<br>${money(product.price)}</p><p style="white-space:pre-line">${esc(description)}</p>${originalNote ? `<p class="muted">${esc(t('shop.originalText'))}</p>` : ''}<label for="size">${esc(t('product.size'))}</label><select id="size"><option value="">${esc(t('product.chooseSize'))}</option>${product.sizes.map(size => {
       const limit = purchaseLimit(id, size);
       return `<option value="${esc(size)}" ${limit ? '' : 'disabled'} ${size === selectedSize ? 'selected' : ''}>${esc(size)} · ${esc(limit ? t('product.maxQuantity',{count:limit}) : t('product.soldOut'))}</option>`;
     }).join('')}</select><button class="primary" id="add" type="button">${esc(t('product.addToBag'))}</button><p id="size-error" role="alert"></p><button class="size-guide-toggle" id="size-guide" type="button" aria-expanded="false" aria-controls="size-guide-content">${esc(t('product.sizeGuide'))} +</button><div id="size-guide-content" class="size-guide-content" hidden>${sizeGuide ? `<p style="white-space:pre-line">${esc(sizeGuide)}</p>${I.getLanguage() !== 'ko' && !product.translations?.[I.getLanguage()]?.sizeGuide ? `<p class="muted">${esc(t('shop.originalText'))}</p>` : ''}` : `<p>${esc(t('product.sizeGuideEmpty'))}</p><p>${esc(t('product.measureIntro'))}</p><ul><li>${esc(t('product.measureShoulder'))}</li><li>${esc(t('product.measureChest'))}</li><li>${esc(t('product.measureLength'))}</li></ul><p class="muted">${esc(t('product.measureNote'))}</p>`}</div><button class="save-product" type="button" data-wishlist="${esc(id)}" aria-pressed="${favorites.has(id)}">${esc(t(favorites.has(id) ? 'product.unsave' : 'product.save'))}</button><div class="sizes">${esc(t('product.paymentNote'))}</div></div></div>`;
+    bindModelPhotos($('#product-detail'));
     $('#size-guide').onclick = () => {
       const expanded = $('#size-guide').getAttribute('aria-expanded') !== 'true';
       $('#size-guide').setAttribute('aria-expanded', String(expanded)); $('#size-guide-content').hidden = !expanded;
@@ -182,11 +213,119 @@
     aboutText.textContent = !content.translations?.[I.getLanguage()]?.aboutText && content.aboutText === defaultText ? t('home.aboutDescription') : label(content,'aboutText');
     document.title = content.brand + ' — ' + t('home.collection');
   }
+  function updateHeroControls() {
+    const images = content?.heroImages || [], pagination = $('.hero-pagination');
+    if (pagination.children.length !== images.length) {
+      pagination.innerHTML = images.map((_, index) => `<button type="button" data-slide="${index}"></button>`).join('');
+    }
+    pagination.querySelectorAll('[data-slide]').forEach((button, index) => {
+      button.classList.toggle('selected', index === currentSlide);
+      button.setAttribute('aria-pressed', String(index === currentSlide));
+      button.setAttribute('aria-label', t('home.photoSelect') + ' ' + I.formatNumber(index + 1));
+    });
+    const button = $('#hero-toggle'), paused = heroPaused || reducedMotion.matches;
+    const key = paused ? 'home.playSlideshow' : 'home.pauseSlideshow';
+    button.hidden = images.length < 2;
+    button.disabled = reducedMotion.matches;
+    button.dataset.i18nAriaLabel = key;
+    button.setAttribute('aria-label', t(key)); button.title = t(key);
+    button.setAttribute('aria-pressed', String(paused));
+    button.querySelector('span').textContent = paused ? '▶' : 'Ⅱ';
+  }
+  function cancelHeroTransition() {
+    heroRequest++; clearTimeout(heroTransitionTimer); heroTransitionTimer = null;
+    const overlay = $('#hero-photo-next');
+    overlay.hidden = true; overlay.classList.remove('is-entering');
+  }
+  function loadHeroImage(source) {
+    if (!source) return Promise.reject(Error('No banner image.'));
+    if (heroLoads.has(source)) return heroLoads.get(source);
+    const pending = new Promise((resolve, reject) => {
+      const image = new Image();
+      const timer = setTimeout(() => { image.onload = image.onerror = null; reject(Error('Banner image unavailable.')); }, 15000);
+      image.onload = async () => {
+        try {
+          if (image.decode) await image.decode();
+          if (!image.naturalWidth) throw Error();
+          resolve(source);
+        } catch { reject(Error('Banner image unavailable.')); }
+        finally { clearTimeout(timer); }
+      };
+      image.onerror = () => { clearTimeout(timer); reject(Error('Banner image unavailable.')); };
+      image.src = source;
+    });
+    heroLoads.set(source, pending);
+    pending.catch(() => { if (heroLoads.get(source) === pending) heroLoads.delete(source); });
+    return pending;
+  }
+  function nextHeroSlide() {
+    const images = content?.heroImages || [];
+    for (let step = 1; step < images.length; step++) {
+      const index = (currentSlide + step) % images.length;
+      if (!failedHeroSources.has(imageUrl(images[index]))) return index;
+    }
+    return currentSlide;
+  }
+  function preloadNextHero() {
+    const next = nextHeroSlide();
+    if (next === currentSlide) return;
+    const source = imageUrl(content.heroImages[next]);
+    loadHeroImage(source).catch(() => { failedHeroSources.add(source); preloadNextHero(); syncHeroTimer(); });
+  }
+  function canRotateHero() {
+    return heroInitialized && content?.heroImages.length > 1 && !heroPaused && !heroHovered && !heroFocused
+      && !document.hidden && campaignVisible && !reducedMotion.matches;
+  }
+  function syncHeroTimer() {
+    clearInterval(heroTimer); heroTimer = null;
+    if (!canRotateHero() || nextHeroSlide() === currentSlide) return;
+    heroTimer = setInterval(() => {
+      if (!canRotateHero()) return;
+      const index = nextHeroSlide();
+      if (index === currentSlide) { clearInterval(heroTimer); heroTimer = null; return; }
+      changeHeroSlide(index);
+    }, 5000);
+  }
+  async function changeHeroSlide(index) {
+    if (!content || !Number.isInteger(index) || index < 0 || index >= content.heroImages.length) return;
+    cancelHeroTransition();
+    if (index === currentSlide) return;
+    const request = heroRequest, source = imageUrl(content.heroImages[index]);
+    const image = $('#hero-photo'), overlay = $('#hero-photo-next');
+    try {
+      await loadHeroImage(source);
+      if (request !== heroRequest) return;
+      if (reducedMotion.matches) {
+        image.src = source; currentSlide = index; updateHeroControls(); preloadNextHero(); return;
+      }
+      overlay.src = source;
+      if (overlay.decode) await overlay.decode();
+      if (request !== heroRequest) return;
+      overlay.hidden = false;
+      // Commit the initial opacity before adding the incoming-image state.
+      void overlay.offsetWidth;
+      overlay.classList.add('is-entering');
+      heroTransitionTimer = setTimeout(() => {
+        if (request !== heroRequest) return;
+        image.src = source; currentSlide = index; updateHeroControls(); preloadNextHero();
+        overlay.hidden = true; overlay.classList.remove('is-entering'); heroTransitionTimer = null;
+      }, 400);
+    } catch {
+      if (request === heroRequest) {
+        failedHeroSources.add(source); cancelHeroTransition(); syncHeroTimer();
+      }
+    }
+  }
   function renderSlides() {
-    $('#hero-photo').src = imageUrl(content.heroImages[currentSlide] || content.heroImages[0]);
+    if (!content?.heroImages.length) return;
+    if (!heroInitialized) {
+      const source = imageUrl(content.heroImages[currentSlide]);
+      $('#hero-photo').src = source; $('#hero-photo-next').src = source; heroInitialized = true;
+    }
     $('#hero-photo').alt = content.brand + ' — ' + t('home.collection');
     $('.editorial-photo img').src = imageUrl(content.journalImage);
-    $('.hero-pagination').innerHTML = content.heroImages.map((_, index) => `<button class="${index === currentSlide ? 'selected' : ''}" data-slide="${index}" aria-label="${esc(t('home.photoSelect'))} ${I.formatNumber(index+1)}" aria-pressed="${index === currentSlide}"></button>`).join('');
+    updateHeroControls();
+    preloadNextHero();
   }
   async function init() {
     try {
@@ -204,7 +343,8 @@
       const savedCart = stored(cartKey), savedFavorites = stored(wishlistKey);
       cart = Array.isArray(savedCart) ? savedCart.filter(item => item && products.some(product => product.id === item.id && product.sizes.includes(item.size)) && Number.isInteger(item.qty) && item.qty > 0 && item.qty <= 99) : [];
       favorites = new Set(Array.isArray(savedFavorites) ? savedFavorites.filter(id => products.some(product => product.id === id)) : []);
-      persist(wishlistKey,[...favorites]); applyBrand(); renderSlides(); render(); renderCart(); renderCommunity();
+      cancelHeroTransition(); currentSlide = 0; heroInitialized = false; failedHeroSources.clear();
+      persist(wishlistKey,[...favorites]); applyBrand(); renderSlides(); syncHeroTimer(); render(); renderCart(); renderCommunity();
     } catch { $('#products').innerHTML = `<p class="muted">${esc(t('product.loadingError'))}</p><button id="retry-products" type="button">${esc(t('common.retry'))}</button>`; }
   }
 
@@ -213,7 +353,7 @@
     if (service && preview) { event.preventDefault(); showInfo('preview'); return; }
     const favorite = event.target.closest('[data-wishlist]'); if (favorite) { toggleFavorite(favorite.dataset.wishlist); return; }
     const product = event.target.closest('[data-product]'); if (product) { openProduct(product.dataset.product); return; }
-    const slide = event.target.closest('[data-slide]'); if (slide && content) { currentSlide = Number(slide.dataset.slide); renderSlides(); return; }
+    const slide = event.target.closest('[data-slide]'); if (slide && content) { changeHeroSlide(Number(slide.dataset.slide)); syncHeroTimer(); return; }
     const language = event.target.closest('[data-set-language]'); if (language) { I.setLanguage(language.dataset.setLanguage); $('#language-dialog').close(); return; }
     const filter = event.target.closest('[data-category]'); if (filter) { category = filter.dataset.category; render(); return; }
     const navigation = event.target.closest('#store-nav a');
@@ -244,6 +384,15 @@
   $('#continue').onclick = () => $('#bag-dialog').close();
   $('#lookbook-button').onclick = () => showInfo('lookbook');
   $('#language-button').onclick = () => { closeMenu(false); $('#language-dialog').showModal(); };
+  $('#hero-toggle').onclick = () => { heroPaused = !heroPaused; updateHeroControls(); syncHeroTimer(); };
+  campaign.addEventListener('mouseenter', () => { if (finePointer.matches) { heroHovered = true; syncHeroTimer(); } });
+  campaign.addEventListener('mouseleave', () => { heroHovered = false; syncHeroTimer(); });
+  campaign.addEventListener('focusin', event => { heroFocused = event.target.matches(':focus-visible'); syncHeroTimer(); });
+  campaign.addEventListener('focusout', event => { heroFocused = !!event.relatedTarget && campaign.contains(event.relatedTarget) && event.relatedTarget.matches(':focus-visible'); syncHeroTimer(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) cancelHeroTransition(); syncHeroTimer(); });
+  reducedMotion.addEventListener('change', () => { cancelHeroTransition(); updateHeroControls(); syncHeroTimer(); });
+  window.addEventListener('pagehide', () => { clearInterval(heroTimer); cancelHeroTransition(); });
+  window.addEventListener('pageshow', syncHeroTimer);
   $('.mobile-menu').onclick = () => $('#site-sidebar').classList.contains('open') ? closeMenu() : openMenu();
   $('#menu-close').onclick = () => closeMenu(); $('#menu-backdrop').onclick = () => closeMenu();
   mobile.addEventListener('change', () => { closeMenu(false); updateSidebarBackground(); });
