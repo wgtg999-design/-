@@ -25,6 +25,7 @@ const modelMap = {
 // These synthetic files deliberately do not assign real outfits to real goods.
 const contentWithModels = { ...defaults, products: defaults.products.map(product => ({ ...product, ...modelMap[product.id] })) };
 const fixtures = {
+  numbered: contentModule.exports.withBundledModelPhotos(defaults),
   normal: contentWithModels,
   single: { ...contentWithModels, heroImages: [defaults.heroImages[0]] },
   brokenHero: { ...contentWithModels, heroImages: [defaults.heroImages[0], '/assets/missing-hero.png'] },
@@ -100,7 +101,9 @@ async function open({ fixture = 'normal', width = 1440, reducedMotion = 'no-pref
   assert(page.clock, 'This suite requires Playwright clock support.');
   const epoch = new Date('2026-10-15T00:00:00Z');
   await page.clock.install({ time: epoch });
-  await page.clock.pauseAt(epoch);
+  // Pause before navigation. A small future boundary avoids racing the real
+  // milliseconds elapsed since install; storefront timers do not exist yet.
+  await page.clock.pauseAt(new Date(epoch.getTime() + 1000));
   await page.goto('/', { waitUntil: 'load' });
   await until(() => page.locator('#products .product').count().then(count => count === 4), 'Four synthetic products should load.');
   await until(() => page.locator('#hero-photo').evaluate(img => img.complete && img.naturalWidth > 0), 'The initial campaign image should decode.');
@@ -417,6 +420,39 @@ async function assertPhotoView(page, view) {
         await page.locator('#product-dialog .close').click();
       });
     });
+
+    await check('Operator numbered photos stay with their exact products and fade in/out over .4s without zoom', () => withPage({ fixture: 'numbered' }, async page => {
+      const folder = path.join(root, '.sites-runtime/browser-qa/numbered-models');
+      fs.mkdirSync(folder, { recursive: true });
+      const expected = ['jacket','shell','denim','trousers'];
+      await until(() => page.locator('#products .is-model-ready').count().then(count => count === 4), 'All four supplied photographs must decode.');
+      for (const [index,id] of expected.entries()) {
+        const product = page.locator(`[data-product="${id}"]`), model = product.locator('.packshot-model-layer');
+        assert.equal(await model.getAttribute('src'), `/assets/${id}-model-01.png`);
+        assert.deepEqual(await model.evaluate(image => [image.naturalWidth,image.naturalHeight]), [1122,1402]);
+        await product.hover(); await settle(page);
+        const shown = await animatedStyle(model, {opacity:1,scale:1});
+        assert.equal(shown.duration, '0.4s');
+        assert.equal(shown.position, index < 2 ? '50% 0%' : '50% 100%');
+        await page.screenshot({path:path.join(folder, `hover-${index+1}.png`)});
+        await page.mouse.move(0,0);
+        await animatedStyle(model, {opacity:0,scale:1});
+      }
+      await page.locator('#sort').selectOption('low');
+      assert.deepEqual(await page.locator('#products .product').evaluateAll(items => items.map(item => item.dataset.product)), ['trousers','denim','jacket','shell']);
+      for (const id of expected) assert.equal(await page.locator(`[data-product="${id}"] .packshot-model-layer`).getAttribute('src'), `/assets/${id}-model-01.png`);
+      assert.equal(await page.locator('[data-quick-add]').count(),0);
+    }));
+
+    await check('The supplied model photos can also be selected in mobile product details', () => withPage({fixture:'numbered',width:390,touch:true},async page=>{
+      await page.locator('[data-product="jacket"] .product-photo').tap();
+      await modelViews(page);
+      await page.locator('[data-photo-view="model"]').tap();
+      await assertPhotoView(page,'model');
+      assert.equal(await page.locator('#product-detail .packshot-model-layer').getAttribute('src'),'/assets/jacket-model-01.png');
+      await fits(page,'Supplied model photo on mobile');
+      await page.screenshot({path:path.join(root,'.sites-runtime/browser-qa/numbered-models/mobile-model.png')});
+    }));
 
     assert.deepEqual(errors, [], 'No browser runtime errors.');
     assert.deepEqual(externalRequests, [], 'The suite must never request an external host.');

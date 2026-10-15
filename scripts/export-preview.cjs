@@ -9,7 +9,7 @@ const crypto = require('node:crypto');
 const ts = require('typescript');
 
 const root = path.resolve(__dirname, '..');
-const assetNames = ['campaign-wide.png', 'campaign.png', 'products.png'];
+const assetNames = ['campaign-wide.png', 'campaign.png', 'products.png', 'jacket-model-01.png', 'shell-model-01.png', 'denim-model-01.png', 'trousers-model-01.png'];
 const sourceNames = [
   'legacy/store.html', 'public/style.css', 'public/i18n.js', 'public/app.js', 'lib/content.ts',
   ...assetNames.map(name => 'public/assets/' + name),
@@ -75,7 +75,7 @@ function readDefaults(source) {
   });
   new vm.Script(compiled, { filename: 'content.ts' }).runInContext(context, { timeout: 1000 });
   if (!module.exports.contentSchema || !module.exports.defaults) fail('The initial catalog/schema is missing.');
-  return JSON.parse(JSON.stringify(module.exports.contentSchema.parse(module.exports.defaults)));
+  return JSON.parse(JSON.stringify(module.exports.withBundledModelPhotos(module.exports.contentSchema.parse(module.exports.defaults))));
 }
 
 function checkedInlineScript(source, name) {
@@ -97,7 +97,7 @@ function main() {
     if (!bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) fail('An initial asset is not a PNG.');
     assets['/assets/' + name] = 'data:image/png;base64,' + bytes.toString('base64');
   }
-  for (const source of [...content.heroImages, content.journalImage, ...content.products.map(product => product.image)]) {
+  for (const source of [...content.heroImages, content.journalImage, ...content.products.flatMap(product => [product.image, ...(product.modelImage ? [product.modelImage] : [])])]) {
     if (!Object.hasOwn(assets, source)) fail('An initial catalog image is not bundled. Uploaded R2 images are not exported.');
   }
 

@@ -128,7 +128,7 @@ document.addEventListener('click',event=>{
     content.heroImages.splice(index,1);
   }else if(action==='model-remove'){
     const product=content.products[index];if(!product)return;
-    delete product.modelImage;delete product.modelFocus;
+    product.modelImage=null;delete product.modelFocus;
   }else{
     const list=action.startsWith('hero')?content.heroImages:content.products,next=index+(action.endsWith('up')?-1:1);
     if(next<0||next>=list.length)return;

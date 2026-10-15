@@ -2,7 +2,7 @@ const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('nod
 let identity=null,owner=null,row=null,uploads=0,storeFailure=null;
 const env={OWNER_BOOTSTRAP_EMAIL:'owner@example.test',BUCKET:{put:async()=>{uploads++}},DB:{prepare(sql){let vals=[];return {bind(...v){vals=v;return this},async first(){if(sql.startsWith('SELECT user_id'))return owner?{user_id:owner}:null;if(sql.startsWith('SELECT data')){if(storeFailure)throw storeFailure;return row}if(sql.startsWith('UPDATE')){if(row.revision!==vals[3])return null;row={data:vals[0],revision:row.revision+1,updated_at:vals[1]};return {revision:row.revision}}throw Error(sql)},async run(){if(sql.startsWith('INSERT OR IGNORE INTO store_owner'))owner??=vals[1];else if(sql.startsWith('INSERT OR IGNORE INTO store_content'))row??={data:vals[1],revision:0,updated_at:vals[2]};else throw Error(sql)}}}}};
 const cache=new Map();function load(file){file=path.resolve(file);if(cache.has(file))return cache.get(file);const module={exports:{}};cache.set(file,module.exports);const source=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const req=id=>id==='cloudflare:workers'?{env}:id.endsWith('?raw')?fs.readFileSync(path.resolve(path.dirname(file),id.slice(0,-4)),'utf8'):id.includes('chatgpt-auth')?{getChatGPTUser:async()=>identity,chatGPTSignInPath:()=>'/signin-with-chatgpt?return_to=%2Fadmin'}:id.startsWith('.')?load(path.resolve(path.dirname(file),id+'.ts')):require(id);vm.runInThisContext('(function(require,module,exports){'+source+'\n})',{filename:file})(req,module,module.exports);cache.set(file,module.exports);return module.exports}
-(async()=>{const admin=load('lib/admin.ts'),api=load('app/api/admin/content/route.ts'),upload=load('app/api/admin/upload/route.ts'),{defaults,contentSchema}=load('lib/content.ts');
+(async()=>{const admin=load('lib/admin.ts'),api=load('app/api/admin/content/route.ts'),upload=load('app/api/admin/upload/route.ts'),{defaults,contentSchema,withBundledModelPhotos}=load('lib/content.ts');
 assert.equal(await admin.isOwner(),false);
 identity={userId:'stranger',email:'other@example.test'};assert.equal(await admin.isOwner(),false);assert.equal(owner,null);
 env.OWNER_BOOTSTRAP_EMAIL=' \t\n ';identity={userId:'empty-email-visitor',email:' \t\n '};
@@ -39,8 +39,8 @@ for(const visitor of [null,{userId:'stranger',email:'other@example.test'}]){
 identity={userId:'site-owner',email:'owner@example.test'};assert.equal((await page.GET(pageReq)).status,200);
 const edited=structuredClone(defaults);edited.products.reverse();edited.products[0].name='Edited product';edited.products[0].visible=false;edited.products.push({...edited.products[1],id:'temporary-test',name:'New product',visible:false});
 r=await api.PUT(req({content:edited,revision:1}));assert.equal(r.status,200);
-const saved=(await (await api.GET()).json()).content;assert.deepEqual(saved,edited);
-const visible=(await (await publicApi.GET()).json()).content.products;assert.deepEqual(visible,edited.products.filter(p=>p.visible));
+const saved=(await (await api.GET()).json()).content;assert.deepEqual(saved,withBundledModelPhotos(edited));
+const visible=(await (await publicApi.GET()).json()).content.products;assert.deepEqual(visible,withBundledModelPhotos(edited).products.filter(p=>p.visible));
 const savedRow=row;
 for(const failure of [new Error('SQLITE_ERROR: no such table: store_content'),new Error('Connection failed: libsql://private-database.example.test token=secret-test-sentinel')]){
  storeFailure=failure;r=await publicApi.GET();assert.equal(r.status,503,'Unavailable catalog must return a controlled service error');assert.match(r.headers.get('content-type'),/^application\/json/);assert.equal(r.headers.get('cache-control'),'no-store');assert.equal(r.headers.get('x-content-type-options'),'nosniff');
@@ -49,7 +49,7 @@ for(const failure of [new Error('SQLITE_ERROR: no such table: store_content'),ne
 storeFailure=null;row={...savedRow,data:'{"private-secret-test":"bad-json"'};
 r=await publicApi.GET();assert.equal(r.status,503,'Malformed saved catalog must not expose parse details or silently show sample products');assert.deepEqual(Object.keys(await r.json()),['error']);
 row={...savedRow,data:JSON.stringify({privateSecret:'invalid-schema-test'})};r=await publicApi.GET();assert.equal(r.status,503,'Invalid saved content must remain a controlled failure');assert.deepEqual(Object.keys(await r.json()),['error']);
-row=savedRow;r=await publicApi.GET();assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'no-store');const recovered=await r.json();assert.equal(recovered.revision,savedRow.revision);assert.equal(recovered.updatedAt,savedRow.updated_at);assert.deepEqual(recovered.content.products,edited.products.filter(p=>p.visible),'Recovery must still exclude hidden products');
+row=savedRow;r=await publicApi.GET();assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'no-store');const recovered=await r.json();assert.equal(recovered.revision,savedRow.revision);assert.equal(recovered.updatedAt,savedRow.updated_at);assert.deepEqual(recovered.content.products,withBundledModelPhotos(edited).products.filter(p=>p.visible),'Recovery must still exclude hidden products');
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=','base64');
 r=await upload.POST(uploadReq(png));assert.equal(r.status,200);assert.match((await r.json()).url,/^\/media\/.+\.png$/);assert.equal(uploads,1);
 assert.equal((await upload.POST(uploadReq(new Uint8Array(8*1024*1024+1)))).status,400);assert.equal(uploads,1);

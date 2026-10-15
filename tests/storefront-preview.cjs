@@ -32,7 +32,7 @@ for (const source of ['i18n.js', 'app.js']) {
   assert(inlineSources.includes(original), `The preview must reuse the actual ${source}, without modifying its functions.`);
 }
 assert(inlineSources[0].includes('window.StorePreviewData'), 'Preview mode must be enabled before either source script.');
-assert.deepEqual(Object.keys(previewData.assets).sort(), ['/assets/campaign-wide.png', '/assets/campaign.png', '/assets/products.png']);
+assert.deepEqual(Object.keys(previewData.assets).sort(), ['/assets/campaign-wide.png', '/assets/campaign.png', '/assets/denim-model-01.png', '/assets/jacket-model-01.png', '/assets/products.png', '/assets/shell-model-01.png', '/assets/trousers-model-01.png']);
 for (const [source, url] of Object.entries(previewData.assets)) {
   assert(url.startsWith('data:image/png;base64,'), 'Only the checked-in PNG assets may be bundled.');
   assert(fs.readFileSync(path.resolve(__dirname, '../public', source.slice(1))).equals(Buffer.from(url.split(',')[1], 'base64')), `${source} bytes changed.`);

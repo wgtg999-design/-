@@ -61,7 +61,8 @@ const contentRoute = load('app/api/admin/content/route.ts');
 const uploadRoute = load('app/api/admin/upload/route.ts');
 const publicRoute = load('app/api/content/route.ts');
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aD1sAAAAASUVORK5CYII=', 'base64');
-const fixture = () => structuredClone(defaults);
+// Explicitly removed pictures isolate upload/editor checks from bundled defaults.
+const fixture = () => ({ ...structuredClone(defaults), products: defaults.products.map(product => ({ ...structuredClone(product), modelImage: null })) });
 const putRequest = (content, revision, origin = 'https://shop.test') => new Request('https://shop.test/api/admin/content', {
   method: 'PUT', headers: { origin, 'Content-Type': 'application/json' }, body: JSON.stringify({ content, revision }),
 });
@@ -124,7 +125,7 @@ function stored() { return JSON.parse(row.data); }
     assert.equal(uploadCount, 0);
   });
 
-  row = { data: JSON.stringify(defaults), revision: 0, updated_at: '2026-10-15T00:00:00Z' };
+  row = { data: JSON.stringify(fixture()), revision: 0, updated_at: '2026-10-15T00:00:00Z' };
   saveCount = 0;
   server = http.createServer(async (request, response) => {
     try {
@@ -208,12 +209,12 @@ function stored() { return JSON.parse(row.data); }
     assert.notEqual(stored().products[1].modelImage, modelImage);
     assert.equal(stored().products[1].modelFocus, 'upper');
   });
-  await check('removing a model photo deletes both optional fields, preserves the product and persists across reload', async () => {
+  await check('removing a model photo stores explicit suppression, preserves the product and persists across reload', async () => {
     await page.locator('[data-action="model-remove"][data-index="1"]').click();
     assert.equal(await page.locator('.model-photo-preview').count(), 0);
     assert.equal(await page.locator('[data-key="modelFocus"][data-product="1"]').isDisabled(), true);
     await page.locator('#save').click(); await page.locator('#save-state').filter({ hasText: '저장 완료' }).waitFor();
-    assert.equal(Object.hasOwn(stored().products[1], 'modelImage'), false);
+    assert.equal(stored().products[1].modelImage, null, 'Removal must suppress bundled defaults on the next read.');
     assert.equal(Object.hasOwn(stored().products[1], 'modelFocus'), false);
     assert.equal(stored().products[1].image, defaults.products[0].image);
     await page.reload(); await page.locator('#editor').waitFor({ state: 'visible' });
