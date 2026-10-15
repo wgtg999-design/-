@@ -110,6 +110,7 @@ async function closeSidebarIfOpen(page) {
         assert.equal(photos.length, 4);
         assert(photos.every(photo => photo.image), 'Product photos must be embedded data images.');
         assert.equal(new Set(photos.map(photo => photo.position)).size, 4, 'Each product must retain its distinct original crop.');
+        assert.equal(await page.locator('.quick-add, .quick-add-placement, [data-quick-add]').count(), 0, 'Product cards must not include Quick Add at any viewport.');
         if (width > 800) assert(await page.locator('#site-sidebar .account-link').isVisible());
         else {
           assert(await page.locator('.mobile-menu').isVisible());
@@ -143,8 +144,7 @@ async function closeSidebarIfOpen(page) {
       });
 
       await check(`${width}px: product details and cart show unconnected stock without pretending to accept an order`, async () => {
-        // Browse the photo itself; the separate quick-add overlay deliberately
-        // opens the same dialog at its size picker on small touch screens.
+        // The photo opens the regular details; there is no Quick Add overlay.
         await page.locator('[data-product=jacket] .product-photo').click();
         assert.equal(await page.locator('#product-dialog').evaluate(dialog => dialog.open), true);
         assert.equal(await page.locator('#size option:disabled').count(), 3);
@@ -210,6 +210,7 @@ async function closeSidebarIfOpen(page) {
             assert.equal(await page.locator('.account-link').textContent(), login);
             assert((await page.locator('#preview-disclaimer').textContent()).includes(previewTitle));
             assert((await page.locator('.product-meta p').first().textContent()).startsWith('₩'), 'A language change must not convert or relabel Korean-won prices.');
+            assert.equal(await page.locator('.quick-add, [data-quick-add]').count(), 0, 'Changing language must not restore Quick Add.');
             await openSidebarIfNeeded(page, '.account-link');
             await page.locator('.account-link').click();
             assert.equal(await page.locator('#info-content h2').textContent(), previewTitle);

@@ -97,8 +97,6 @@
     'product.chooseSize': ['사이즈 선택', '选择尺码', '選擇尺寸', 'サイズを選択'],
     'product.maxQuantity': ['최대 {count}개', '最多 {count} 件', '最多 {count} 件', '最大 {count} 点'],
     'product.addToBag': ['ADD TO BAG', '加入购物袋', '加入購物袋', 'カートに入れる'],
-    'product.quickAdd': ['빠른 담기', '快速加购', '快速選購', 'クイック追加'],
-    'product.quickAddAria': ['{name} 사이즈 선택 후 담기', '选择 {name} 的尺码后加入购物袋', '選擇 {name} 的尺寸後加入購物袋', '{name} のサイズを選んでカートに入れる'],
     'product.photoViews': ['상품 사진 보기', '查看商品图片', '查看商品圖片', '商品画像の表示'],
     'product.packshot': ['상품 사진', '商品图', '商品照', '商品画像'],
     'product.modelPhoto': ['착용 사진', '上身图', '實穿照', '着用画像'],

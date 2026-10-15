@@ -115,7 +115,7 @@
     if (sort !== 'default') list.sort((a, b) => sort === 'low' ? a.price - b.price : b.price - a.price);
     const title = $('.section-title h2'); title.removeAttribute('data-i18n');
     title.textContent = t(view === 'best' ? 'shop.bestTitle' : view === 'wishlist' ? 'shop.wishlistTitle' : 'shop.productTitle');
-    $('#products').innerHTML = list.map(product => `<article class="product-card"><button class="product" data-product="${esc(product.id)}" aria-label="${esc(t('shop.detailAria',{name:label(product,'name')}))}">${photo(product)}<div class="product-meta"><div><h3>${esc(label(product,'name'))}</h3><small>${esc(label(product,'color'))}</small>${product.sizes.some(size => purchaseLimit(product.id,size) > 0) ? '' : `<small>${esc(t('product.soldOut'))}</small>`}</div><p>${money(product.price)}</p></div></button>${favoriteButton(product)}<div class="quick-add-placement"><button class="quick-add" type="button" data-quick-add="${esc(product.id)}" aria-label="${esc(t('product.quickAddAria',{name:label(product,'name')}))}">${esc(t('product.quickAdd'))}<span aria-hidden="true">+</span></button></div></article>`).join('');
+    $('#products').innerHTML = list.map(product => `<article class="product-card"><button class="product" data-product="${esc(product.id)}" aria-label="${esc(t('shop.detailAria',{name:label(product,'name')}))}">${photo(product)}<div class="product-meta"><div><h3>${esc(label(product,'name'))}</h3><small>${esc(label(product,'color'))}</small>${product.sizes.some(size => purchaseLimit(product.id,size) > 0) ? '' : `<small>${esc(t('product.soldOut'))}</small>`}</div><p>${money(product.price)}</p></div></button>${favoriteButton(product)}</article>`).join('');
     bindModelPhotos($('#products'));
     $('#empty').hidden = list.length > 0;
     const message = view === 'best' && !products.some(product => product.featured === true) ? 'shop.bestEmpty'
@@ -402,8 +402,6 @@
       holder.setAttribute('aria-label', label(product,'name') + ' — ' + t(model ? 'product.modelPhoto' : 'product.packshot'));
       return;
     }
-    const quickAdd = event.target.closest('[data-quick-add]');
-    if (quickAdd) { openProduct(quickAdd.dataset.quickAdd); $('#size').focus(); return; }
     const product = event.target.closest('[data-product]'); if (product) { openProduct(product.dataset.product); return; }
     const slide = event.target.closest('[data-slide]'); if (slide && content) { changeHeroSlide(Number(slide.dataset.slide)); syncHeroTimer(); return; }
     const language = event.target.closest('[data-set-language]'); if (language) { I.setLanguage(language.dataset.setLanguage); $('#language-dialog').close(); return; }

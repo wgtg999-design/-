@@ -318,7 +318,7 @@ async function assertPhotoView(page, view) {
       await jacket.hover(); await settle(page);
       const hovered = await animatedStyle(layer, { opacity: 1, scale: 1 });
       await animatedStyle(stage, { opacity: 1, scale: 1 });
-      await page.locator('[data-quick-add="jacket"]').hover(); await settle(page);
+      await jacket.locator('.product-photo').hover(); await settle(page);
       await animatedStyle(layer, { opacity: 1, scale: 1 });
       assert(hovered.duration.split(', ').every(duration => duration === '0.4s'));
       await page.mouse.move(0, 0); await settle(page);
@@ -346,23 +346,20 @@ async function assertPhotoView(page, view) {
       assert.equal(await page.locator('#product-dialog').evaluate(dialog => dialog.open), false);
     }));
 
-    await check('Desktop quick add reveals on hover or keyboard focus and waits for an explicit size and Add', () => withPage({}, async page => {
-      const jacket = page.locator('[data-product="jacket"]'), quickAdd = page.locator('[data-quick-add="jacket"]');
-      assert.equal(await quickAdd.count(), 1);
-      assert.equal((await style(quickAdd)).opacity, 0, 'Desktop cards should not cover the photo with permanent quick actions.');
+    await check('Desktop cards omit Quick Add and regular product details require an explicit size and Add', () => withPage({}, async page => {
+      const jacket = page.locator('[data-product="jacket"]');
+      assert.equal(await page.locator('.quick-add, .quick-add-placement, [data-quick-add]').count(), 0, 'Quick Add must be removed from the card markup.');
       await jacket.hover(); await settle(page);
-      await animatedStyle(quickAdd, { opacity: 1 });
+      assert.equal(await page.locator('.quick-add, [data-quick-add]').count(), 0, 'Hover must not reveal a Quick Add action.');
       await page.mouse.move(0, 0); await settle(page);
-      await page.keyboard.press('Tab'); await quickAdd.focus(); await settle(page);
-      assert(await quickAdd.evaluate(element => element.matches(':focus-visible')));
-      await animatedStyle(quickAdd, { opacity: 1 });
+      await page.keyboard.press('Tab'); await jacket.focus(); await settle(page);
+      assert(await jacket.evaluate(element => element.matches(':focus-visible')));
       assert.equal(await cartCount(page), '0');
-      await page.keyboard.press('Enter');
+      await jacket.locator('.product-photo').click();
       assert.equal(await page.locator('#product-dialog').evaluate(dialog => dialog.open), true);
       assert.equal(await page.locator('#product-detail h2').textContent(), defaults.products[0].name);
-      assert.equal(await page.evaluate(() => document.activeElement.id), 'size');
       assert.equal(await page.locator('#size').inputValue(), '');
-      assert.equal(await cartCount(page), '0', 'Opening the size chooser must not silently put a product in the cart.');
+      assert.equal(await cartCount(page), '0', 'Opening regular product details must not silently put a product in the cart.');
       await page.locator('#add').click();
       assert.equal(await cartCount(page), '0');
       assert((await page.locator('#size-error').textContent()).trim(), 'Missing size should give a useful error.');
@@ -376,15 +373,13 @@ async function assertPhotoView(page, view) {
       assert.equal(await page.locator('.cart-row').count(), 1);
     }));
 
-    await check('Touch users can see quick add and switch product/model photos explicitly without hover or automatic cart changes', async () => {
+    await check('Touch cards omit Quick Add while product photos open a gallery and require an explicit size and Add', async () => {
       for (const width of [390, 320]) await withPage({ width, touch: true }, async page => {
-        const quickAdd = page.locator('[data-quick-add="jacket"]');
-        assert(await quickAdd.isVisible());
-        assert.equal((await style(quickAdd)).opacity, 1);
+        assert.equal(await page.locator('.quick-add, .quick-add-placement, [data-quick-add]').count(), 0, `${width}px touch cards must not contain Quick Add.`);
         assert.equal(await cartCount(page), '0');
-        await quickAdd.tap();
+        await page.locator('[data-product="jacket"] .product-photo').tap();
         assert.equal(await page.locator('#product-dialog').evaluate(dialog => dialog.open), true);
-        assert.equal(await page.evaluate(() => document.activeElement.id), 'size');
+        assert.equal(await page.locator('#size').inputValue(), '');
         assert.equal(await cartCount(page), '0');
         await modelViews(page); await assertPhotoView(page, 'product');
         await page.locator('[data-photo-view="model"]').tap();
@@ -393,12 +388,22 @@ async function assertPhotoView(page, view) {
         await assertPhotoView(page, 'product');
         assert.equal(await cartCount(page), '0');
         await fits(page, `${width}px touch photo gallery`);
+        await page.locator('#add').tap();
+        assert.equal(await cartCount(page), '0');
+        assert((await page.locator('#size-error').textContent()).trim(), 'Missing size should give a useful error on touch screens.');
+        await page.locator('#size').selectOption(defaults.products[0].sizes[0]);
+        assert.equal(await cartCount(page), '0', 'Choosing a size must not add an item before Add is tapped.');
+        await page.locator('#add').tap();
+        assert.equal(await cartCount(page), '1');
+        assert.equal(await page.locator('#bag-dialog').evaluate(dialog => dialog.open), true);
+        assert.equal(await page.locator('.cart-row').count(), 1);
       });
     });
 
     await check('Unmapped packshots and product details fit desktop and small touch screens', async () => {
       for (const width of [1440, 390, 320]) await withPage({ fixture: 'noModels', width, touch: width < 800 }, async page => {
         await fits(page, `${width}px storefront`);
+        assert.equal(await page.locator('.quick-add, .quick-add-placement, [data-quick-add]').count(), 0);
         assert.equal(await page.locator('#products').evaluate(element => getComputedStyle(element).gridTemplateColumns.split(' ').length), width > 800 ? 4 : 2);
         assert.equal(await page.locator('.packshot-model-layer').count(), 0, 'Products without a model mapping must keep the catalog packshots.');
         await page.locator('[data-product="jacket"] .product-photo').click();

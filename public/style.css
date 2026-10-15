@@ -68,13 +68,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{ou
 .packshot-model-layer[data-focus="upper"]{object-position:center 24%}
 .packshot-model-layer[data-focus="lower"]{object-position:center 78%}
 .product-card:has(:focus-visible) .is-model-ready .packshot-model-layer{opacity:1}
-.quick-add-placement{position:absolute;top:0;left:0;right:0;aspect-ratio:1;display:flex;align-items:flex-end;padding:8px;pointer-events:none;z-index:2}
-.quick-add{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:44px;padding:10px 8px;background:#151515;color:#fff;font-size:10px;line-height:1.4;pointer-events:auto;transition:opacity .4s ease,transform .4s ease}
-.quick-add span{font-size:14px;font-weight:400}
 @media(hover:hover) and (pointer:fine){
   .product-card:hover .is-model-ready .packshot-model-layer{opacity:1}
-  .quick-add{opacity:0;transform:translateY(6px);pointer-events:none}
-  .product-card:hover .quick-add,.product-card:has(:focus-visible) .quick-add{opacity:1;transform:none;pointer-events:auto}
 }
 .product-index{position:absolute;left:11px;top:11px;font-size:8px;color:#777;z-index:2}
 .product-meta{display:block;padding:15px 3px 0;line-height:1.7;min-width:0}
@@ -256,4 +251,4 @@ body.menu-is-open{overflow:hidden}
   #toast{left:50%;width:max-content;max-width:calc(100% - 32px);font-size:11px}
 }
 @media(max-width:380px){.mobile-bar{gap:8px;padding:0 12px}.mobile-logo{font-size:22px;max-width:calc(100% - 128px)}.filters{gap:12px}.sort{font-size:8px}.sort select{font-size:9px}.section-title>span{font-size:6px}.campaign-caption{font-size:7px}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}.quick-add{transform:none}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
