@@ -63,7 +63,7 @@ async function openSidebarIfNeeded(page, selector) {
   if (!(await page.locator(selector).isVisible())) {
     await page.locator('.mobile-menu').click();
     assert.equal(await page.locator('.mobile-menu').getAttribute('aria-expanded'), 'true');
-    assert(await page.locator(selector).isVisible(), `${selector} must be available in the mobile drawer.`);
+    assert(await page.locator(selector).isVisible(), `${selector} must be available in the navigation drawer.`);
   }
 }
 async function closeSidebarIfOpen(page) {
@@ -182,7 +182,10 @@ async function closeSidebarIfOpen(page) {
           assert(await page.locator('#site-sidebar .account-link').isVisible());
           await page.locator('#site-sidebar .account-link').click();
           assert.equal(await page.locator('.mobile-menu').getAttribute('aria-expanded'), 'false');
-        } else await page.locator('#site-sidebar .account-link').click();
+        } else {
+          await openSidebarIfNeeded(page, '#site-sidebar .account-link');
+          await page.locator('#site-sidebar .account-link').click();
+        }
         assert.equal(await page.locator('#info-dialog').evaluate(dialog => dialog.open), true);
         await text(page, '#info-content', '미리보기');
         assert(!page.url().includes('/signup'), 'The preview must not claim to run account registration.');

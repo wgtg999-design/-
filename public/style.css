@@ -177,6 +177,27 @@ body.menu-is-open{overflow:hidden}
 
 @media(min-width:801px){.site-sidebar.hero-overlay{background:transparent;color:#fff;mix-blend-mode:difference}}
 @media(min-width:1700px){:root{--store-rail:260px}.site-sidebar{width:260px;padding-left:33px;padding-right:33px}.store-main,.store-footer{margin-left:260px}.shop,.editorial,.community{padding-left:40px;padding-right:40px}#toast{left:calc(50% + 130px)}}
+/* The catalog uses the full canvas. Only the rail dissolves during scrolling,
+   so product widths stay steady while the photographs enter the viewport. */
+@media(min-width:801px){
+  html{scroll-padding-top:82px}
+  .scroll-focus-ready .store-main,.scroll-focus-ready .store-footer{margin-left:0}
+  .scroll-focus-ready .hero{width:100%;margin-left:0}
+  .scroll-focus-ready #toast{left:50%}
+  .scroll-focus-ready .site-sidebar{opacity:var(--sidebar-opacity,1);filter:blur(var(--sidebar-blur,0px));background:transparent;pointer-events:none}
+  .scroll-focus-ready .site-sidebar a,.scroll-focus-ready .site-sidebar button{pointer-events:auto}
+  .scroll-focus-ready .site-sidebar.is-dissolved{visibility:hidden;pointer-events:none}
+  .scroll-focus-ready .site-sidebar.is-dissolved a,.scroll-focus-ready .site-sidebar.is-dissolved button{pointer-events:none}
+  .scroll-focus-ready .site-sidebar.is-keyboard-active,.scroll-focus-ready .site-sidebar.open{opacity:1;filter:none;background:#fff;color:#151515;mix-blend-mode:normal;pointer-events:auto;visibility:visible}
+  .catalog-focus .mobile-bar{display:flex;position:fixed;inset:0 0 auto;z-index:35;align-items:center;justify-content:space-between;height:58px;padding:0 28px;background:#ffffffed;border-bottom:1px solid #eee;gap:12px;animation:catalog-bar-enter .4s ease}
+  .catalog-focus .mobile-menu,.catalog-focus #mobile-bag-button{display:block;min-width:44px;min-height:44px;padding:8px 0;font-size:10px;white-space:nowrap;flex:none}
+  .catalog-focus .mobile-logo{position:absolute;left:50%;transform:translateX(-50%);font-size:25px;letter-spacing:-1.4px;line-height:1.1;max-width:calc(100% - 180px);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .desktop-menu-open .site-sidebar{z-index:60}
+  .desktop-menu-open #menu-close{display:block;position:absolute;top:10px;right:10px;width:44px;min-height:44px;font-size:21px}
+  .desktop-menu-open #menu-backdrop:not([hidden]){display:block;position:fixed;inset:0;z-index:55;background:#0005;width:100%;height:100%;cursor:pointer}
+  .desktop-menu-open .site-sidebar .logo{padding-right:19px}
+}
+@keyframes catalog-bar-enter{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
 @media(min-width:801px) and (max-height:690px){.site-sidebar{padding-top:23px}.site-sidebar .logo{font-size:36px}.sidebar-primary{margin-top:30px}.sidebar-tools{margin-top:27px}.sidebar-social{padding-top:25px}.sidebar-primary a,.sidebar-primary button,.sidebar-tools a,.sidebar-tools button,.sidebar-social button,.sidebar-social a{min-height:27px}}
 @media(max-width:1100px) and (min-width:801px){.products{gap:27px 8px}.product-meta h3{font-size:10px}.filters{gap:15px}.shop,.editorial,.community{padding-left:20px;padding-right:20px}.store-footer{grid-template-columns:1fr 1fr}.footer-logo{grid-column:1/-1}.campaign-caption{font-size:8px;left:calc(var(--store-rail) + 20px);right:20px}}
 @media(max-width:800px){

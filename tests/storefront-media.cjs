@@ -122,9 +122,9 @@ async function commitSlide(page, index) {
   assert.equal(await heroSource(page), source);
 }
 async function leaveHero(page) {
-  // Banner hover/focus pauses are intentional. Move onto the fixed sidebar and
-  // focus outside the banner without scrolling it out of view.
-  await page.mouse.move(10, 10);
+  // Empty rail space now lets pointer events through to the full-width hero.
+  // Use the visible logo to leave the banner without scrolling it away.
+  await page.locator('#site-sidebar .logo').hover();
   await page.evaluate(() => document.querySelector('#sort').focus({ preventScroll: true }));
 }
 async function fits(page, label) {

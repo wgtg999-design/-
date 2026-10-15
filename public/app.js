@@ -14,8 +14,35 @@
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
   const campaign = $('.hero'), sidebar = $('#site-sidebar');
-  let campaignVisible = true;
-  function updateSidebarBackground() { sidebar.classList.toggle('hero-overlay', campaignVisible && !mobile.matches); }
+  let campaignVisible = true, sidebarFrame = 0;
+  function updateSidebarBackground() {
+    const rect = campaign.getBoundingClientRect(), desktop = !mobile.matches;
+    const progress = desktop ? Math.min(1, Math.max(0, -rect.top / Math.max(1, rect.height * .72))) : 0;
+    const open = sidebar.classList.contains('open');
+    // Keep an actively used keyboard menu visible until focus leaves it.
+    const pinned = desktop && !open && sidebar.contains(document.activeElement) && document.activeElement.matches(':focus-visible');
+    const dissolved = desktop && progress >= 1 && !pinned && !open;
+    const opacity = reducedMotion.matches ? (progress >= 1 ? 0 : 1) : 1 - progress * progress * (3 - 2 * progress);
+    document.body.classList.add('scroll-focus-ready');
+    const catalogFocus = desktop && progress >= 1;
+    document.body.classList.toggle('catalog-focus', catalogFocus);
+    document.body.classList.toggle('desktop-menu-open', desktop && open);
+    sidebar.style.setProperty('--sidebar-opacity', String(opacity));
+    sidebar.style.setProperty('--sidebar-blur', `${reducedMotion.matches ? 0 : 6 * progress}px`);
+    sidebar.classList.toggle('is-dissolved', dissolved);
+    sidebar.classList.toggle('is-keyboard-active', pinned && progress > 0);
+    sidebar.classList.toggle('hero-overlay', desktop && campaignVisible && !open && !pinned);
+    sidebar.inert = !open && (mobile.matches || dissolved);
+    if (sidebar.inert) sidebar.setAttribute('aria-hidden','true'); else sidebar.removeAttribute('aria-hidden');
+    // The compact bar leaves the screen at the banner. Carry its focus to an
+    // equivalent visible control instead of leaving it in a hidden header.
+    if (desktop && !catalogFocus && !open && $('.mobile-bar').contains(document.activeElement)) {
+      (document.activeElement.id === 'mobile-bag-button' ? $('#bag-button') : sidebar.querySelector('.logo')).focus({preventScroll:true});
+    }
+  }
+  function scheduleSidebar() {
+    if (!sidebarFrame) sidebarFrame = requestAnimationFrame(() => { sidebarFrame = 0; updateSidebarBackground(); });
+  }
   if ('IntersectionObserver' in window) {
     new IntersectionObserver(entries => { campaignVisible = entries[0].isIntersecting; updateSidebarBackground(); syncHeroTimer(); }, {threshold:0}).observe(campaign);
   }
@@ -192,19 +219,22 @@
   }
   function changeView(next) {
     view = next; category = 'ALL'; search = ''; sort = 'default';
-    $('#search').value = ''; $('#sort').value = 'default'; render(); closeMenu(false); $('#shop').scrollIntoView();
+    $('#search').value = ''; $('#sort').value = 'default'; render(); closeMenu(false);
+    $('#shop').focus({preventScroll:true}); $('#shop').scrollIntoView();
   }
   function closeMenu(restore = true) {
+    const wasOpen = sidebar.classList.contains('open');
     $('#site-sidebar').classList.remove('open'); document.body.classList.remove('menu-is-open');
     $('#menu-backdrop').hidden = true; $('.mobile-menu').setAttribute('aria-expanded','false');
-    $('#site-sidebar').inert = mobile.matches;
-    if (mobile.matches) $('#site-sidebar').setAttribute('aria-hidden','true'); else $('#site-sidebar').removeAttribute('aria-hidden');
-    if (restore && mobile.matches) $('.mobile-menu').focus();
+    if (wasOpen && (mobile.matches || document.body.classList.contains('catalog-focus'))) $('.mobile-menu').focus({preventScroll:true});
+    else if (restore && mobile.matches) $('.mobile-menu').focus({preventScroll:true});
+    updateSidebarBackground();
   }
   function openMenu() {
     $('#site-sidebar').inert = false; $('#site-sidebar').removeAttribute('aria-hidden');
     $('#site-sidebar').classList.add('open'); document.body.classList.add('menu-is-open');
-    $('#menu-backdrop').hidden = false; $('.mobile-menu').setAttribute('aria-expanded','true'); $('#menu-close').focus();
+    $('#menu-backdrop').hidden = false; $('.mobile-menu').setAttribute('aria-expanded','true');
+    updateSidebarBackground(); $('#menu-close').focus();
   }
   function applyBrand() {
     if (!content) return;
@@ -380,6 +410,7 @@
     const filter = event.target.closest('[data-category]'); if (filter) { category = filter.dataset.category; render(); return; }
     const navigation = event.target.closest('#store-nav a');
     if (navigation) { if (navigation.dataset.view) { event.preventDefault(); changeView(navigation.dataset.view); } else closeMenu(false); return; }
+    if (event.target.closest('#site-sidebar .logo')) { closeMenu(false); return; }
     const remove = event.target.closest('[data-remove]'); if (remove) { cart.splice(Number(remove.dataset.remove),1); saveCart(); return; }
     const quantity = event.target.closest('[data-qty]');
     if (quantity) {
@@ -412,14 +443,25 @@
   campaign.addEventListener('focusin', event => { heroFocused = event.target.matches(':focus-visible'); syncHeroTimer(); });
   campaign.addEventListener('focusout', event => { heroFocused = !!event.relatedTarget && campaign.contains(event.relatedTarget) && event.relatedTarget.matches(':focus-visible'); syncHeroTimer(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) cancelHeroTransition(); syncHeroTimer(); });
-  reducedMotion.addEventListener('change', () => { cancelHeroTransition(); updateHeroControls(); syncHeroTimer(); });
+  reducedMotion.addEventListener('change', () => { cancelHeroTransition(); updateHeroControls(); syncHeroTimer(); updateSidebarBackground(); });
   window.addEventListener('pagehide', () => { clearInterval(heroTimer); cancelHeroTransition(); });
-  window.addEventListener('pageshow', syncHeroTimer);
+  window.addEventListener('pageshow', () => { syncHeroTimer(); scheduleSidebar(); });
+  window.addEventListener('scroll', scheduleSidebar, {passive:true});
+  window.addEventListener('resize', scheduleSidebar, {passive:true});
+  sidebar.addEventListener('focusin', scheduleSidebar);
+  sidebar.addEventListener('focusout', scheduleSidebar);
   $('.mobile-menu').onclick = () => $('#site-sidebar').classList.contains('open') ? closeMenu() : openMenu();
   $('#menu-close').onclick = () => closeMenu(); $('#menu-backdrop').onclick = () => closeMenu();
-  mobile.addEventListener('change', () => { closeMenu(false); updateSidebarBackground(); });
+  mobile.addEventListener('change', () => {
+    const focused = sidebar.contains(document.activeElement), wasOpen = sidebar.classList.contains('open');
+    closeMenu(false);
+    if (focused || wasOpen) {
+      const toggle = $('.mobile-menu');
+      (toggle.getClientRects().length ? toggle : sidebar.querySelector('.logo')).focus({preventScroll:true});
+    }
+  });
   document.addEventListener('keydown', event => {
-    if (!mobile.matches || !$('#site-sidebar').classList.contains('open')) return;
+    if (!$('#site-sidebar').classList.contains('open')) return;
     if (event.key === 'Escape') { event.preventDefault(); closeMenu(); }
     if (event.key === 'Tab') {
       const focusable = [...$('#site-sidebar').querySelectorAll('a,button,input,select,[tabindex]')].filter(element => !element.disabled && element.tabIndex >= 0 && element.getClientRects().length);
@@ -437,7 +479,8 @@
     dialog.addEventListener('close', () => {
       if (dialog.id === 'product-dialog') currentProduct = null;
       if (dialog.id === 'info-dialog') currentInfo = null;
-      if (dialog.id === 'language-dialog' && mobile.matches) $('.mobile-menu').focus();
+      if ((dialog.id === 'language-dialog' && (mobile.matches || document.body.classList.contains('catalog-focus')))
+        || (sidebar.inert && sidebar.contains(document.activeElement))) $('.mobile-menu').focus({preventScroll:true});
     });
   });
   window.addEventListener('street-label:languagechange', () => {
