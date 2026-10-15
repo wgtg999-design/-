@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ko">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>관리자 — Street Label</title><link rel="stylesheet" href="/admin.css"><script src="/admin.js" defer></script></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>관리자 — Street Label</title><link rel="stylesheet" href="/admin.css"><script src="/homepage-admin.js" defer></script><script src="/admin.js" defer></script></head>
 <body>
 <header><a href="/">YOUR LABEL / STUDIO</a><div><a href="/admin/orders">주문·재고 관리</a><a href="/" target="_blank">홈페이지 보기 ↗</a><a href="/signout-with-chatgpt?return_to=%2F" target="_top">로그아웃</a></div></header>
 <main>
@@ -29,6 +29,7 @@
 <div class="section-head"><div><h2>02 / 메인 사진</h2><p>JPG · PNG · WebP, 장당 최대 8MB. 가로형 사진을 권장합니다.</p></div><label class="button">사진 추가<input type="file" accept="image/jpeg,image/png,image/webp" data-upload="hero" hidden></label></div>
 <div id="heroes" class="heroes"></div><h3>룩북 / 저널 사진</h3><div id="journal"></div>
 </section>
+<section id="homepage-editor"></section>
 <section id="catalog"><div class="section-head"><div><h2>03 / 상품 목록</h2><p>순서 변경과 숨김도 저장 후 반영됩니다. 최대 100개 상품.</p></div><button id="add-product" type="button">+ 상품 추가</button></div><div id="product-editor"></div></section>
 </div>
 <div class="savebar"><span id="save-state">불러오는 중</span><div><button id="reload" type="button">저장된 내용 다시 불러오기</button><button id="save" class="primary" type="button" disabled>변경사항 저장</button></div></div>

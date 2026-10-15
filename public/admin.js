@@ -75,6 +75,7 @@ function render(){
   document.querySelectorAll('[data-field]').forEach(element=>element.value=content[element.dataset.field]);
   document.querySelectorAll('[data-social]').forEach(element=>element.value=content.socialLinks?.[element.dataset.social]??'');
   renderBrandTranslations();
+  renderHomepageEditor();
   $('#heroes').innerHTML=content.heroImages.map((source,index)=>visual(source,index,'hero')).join('');
   $('#journal').innerHTML=visual(content.journalImage,0,'journal');
   $('#product-editor').innerHTML=content.products.length?content.products.map(productCard).join(''):'<p class="empty">등록된 상품이 없습니다. 상품 추가를 눌러 주세요.</p>';
@@ -122,10 +123,11 @@ document.addEventListener('click',event=>{
   const index=Number(button.dataset.index),action=button.dataset.action;
   if(action==='remove'){
     if(!confirm('이 상품을 목록에서 삭제할까요? 저장해야 반영됩니다.'))return;
-    const [removed]=content.products.splice(index,1);if(removed)productLocales.delete(removed.id);
+    const [removed]=content.products.splice(index,1);if(removed){productLocales.delete(removed.id);if(content.homepage)for(const key of ['slider01','slider02'])content.homepage[key]=content.homepage[key].filter(id=>id!==removed.id);}
   }else if(action==='hero-remove'){
     if(content.heroImages.length===1){status('메인 사진은 최소 1장이 필요합니다.',true);return}
     content.heroImages.splice(index,1);
+    content.homepage?.banners.splice(index,1);
   }else if(action==='model-remove'){
     const product=content.products[index];if(!product)return;
     product.modelImage=null;delete product.modelFocus;
@@ -133,6 +135,7 @@ document.addEventListener('click',event=>{
     const list=action.startsWith('hero')?content.heroImages:content.products,next=index+(action.endsWith('up')?-1:1);
     if(next<0||next>=list.length)return;
     [list[index],list[next]]=[list[next],list[index]];
+    if(action.startsWith('hero')&&content.homepage){const rows=content.homepage.banners;[rows[index],rows[next]]=[rows[next],rows[index]];}
   }
   mark();render();
 });
@@ -162,7 +165,7 @@ document.addEventListener('change',async event=>{
   busyState(true);status('사진을 업로드하고 있습니다…');
   try{
     const data=await api('/api/admin/upload',{method:'POST',headers:{'Content-Type':file.type},body:file});
-    if(type==='hero'){if(index===null)content.heroImages.push(data.url);else content.heroImages[index]=data.url}
+    if(type==='hero'){if(index===null){content.heroImages.push(data.url);content.homepage?.banners.push({href:'',mobileImage:null});}else content.heroImages[index]=data.url}
     else if(type==='journal')content.journalImage=data.url;
     else if(type==='model'){content.products[index].modelImage=data.url;content.products[index].modelFocus??='center'}
     else{content.products[index].image=data.url;content.products[index].crop=''}
@@ -177,6 +180,7 @@ $('#add-product').onclick=()=>{
 };
 $('#save').onclick=async()=>{
   if(busy||!content||!dirty)return;
+  if(document.querySelector(':invalid')){document.querySelector(':invalid').reportValidity();return;}
   busyState(true);status('변경사항을 저장하고 있습니다…');
   try{
     const data=await api('/api/admin/content',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content,revision})});

@@ -46,9 +46,9 @@
   <main class="store-main">
     <h1 class="sr-only">YOUR LABEL — Collection 001</h1>
     <section class="hero" aria-label="컬렉션 룩북">
-      <img id="hero-photo" src="/assets/campaign-wide.png" alt="스테인리스 공간에서 촬영한 세 모델의 가로형 AI 패션 캠페인" fetchpriority="high">
+      <a id="hero-link" href="#shop" aria-label="캠페인 보기"><img id="hero-photo" src="/assets/campaign-wide.png" alt="스테인리스 공간에서 촬영한 세 모델의 가로형 AI 패션 캠페인" fetchpriority="high">
       <img id="hero-photo-next" src="/assets/campaign-wide.png" alt="" aria-hidden="true" hidden>
-      <p class="notice">COLLECTION 001 — INDEPENDENT UNIFORM</p>
+      </a><p class="notice">COLLECTION 001 — INDEPENDENT UNIFORM</p>
       <div class="campaign-caption"><span data-i18n="home.collection">COLLECTION 001</span><a href="#shop" data-i18n="home.discover">DISCOVER ↗</a></div>
       <div class="hero-controls">
         <div class="hero-pagination" role="group" aria-label="룩북 이미지 선택" data-i18n-aria-label="home.photoSelect">
@@ -60,7 +60,7 @@
     </section>
 
     <section id="shop" class="shop" tabindex="-1">
-      <div class="section-title"><h2 data-i18n="home.shopTitle">NEW COLLECTION</h2><span data-i18n="home.shopSubtitle">ESSENTIAL FORMS / 001</span></div>
+      <div class="section-title" hidden><h2 data-i18n="home.shopTitle">NEW COLLECTION</h2><span data-i18n="home.shopSubtitle">ESSENTIAL FORMS / 001</span></div>
       <div class="shop-controls">
         <div class="filters" role="group" aria-label="상품 분류" data-i18n-aria-label="home.categoryLabel">
           <button class="active" data-category="ALL" aria-pressed="true" data-i18n="category.ALL">ALL</button>
@@ -72,17 +72,15 @@
         <label class="sort"><span data-i18n="home.sort">SORT</span><select id="sort" aria-label="상품 정렬" data-i18n-aria-label="home.sort"><option value="default" data-i18n="home.sortDefault">기본순</option><option value="low" data-i18n="home.sortLow">낮은 가격순</option><option value="high" data-i18n="home.sortHigh">높은 가격순</option></select></label>
       </div>
       <div id="search-area" hidden><label for="search" data-i18n="home.searchLabel">상품 검색</label><input id="search" type="search" placeholder="상품명 또는 색상 검색" data-i18n-placeholder="home.searchPlaceholder"><button id="clear-search" data-i18n="home.resetFilters">초기화</button></div>
-      <div id="products" class="products"></div>
+      <div id="products" class="products product-slider" tabindex="0" aria-label="상품을 좌우로 탐색"></div>
       <div id="empty" hidden><p data-i18n="home.noProducts">검색된 상품이 없습니다.</p><button id="reset-filters" data-i18n="home.resetFilters">초기화</button></div>
     </section>
 
-    <section id="archive" class="editorial" tabindex="-1">
-      <div class="editorial-heading"><h2 data-i18n="home.journal">COLLECTION JOURNAL</h2><span data-i18n="home.journalVolume">VOLUME 01</span></div>
-      <button class="editorial-photo" id="lookbook-button" aria-label="전체 룩북 보기" data-i18n-aria-label="home.viewEditorial"><img loading="lazy" src="/assets/campaign.png" alt="콘크리트 공간에서 촬영한 AI 컬렉션 룩북"><span data-i18n="home.viewEditorial">VIEW THE EDITORIAL ↗</span></button>
-      <div class="editorial-bottom"><p data-i18n="home.editorialUniform">INDEPENDENT UNIFORM</p><p data-i18n="home.editorialLocation">SEOUL — COLLECTION 001</p></div>
-    </section>
-    <section id="about" class="about" tabindex="-1"><p>YOUR LABEL</p><h2 data-i18n="home.aboutTagline">남들과 다른 결. 방향은 분명하게.</h2><p data-i18n="home.aboutDescription">일상의 실루엣을 다시 바라보는 독립 스트릿웨어.</p></section>
-    <section id="community" class="community" tabindex="-1"><div class="section-title"><h2 data-i18n="home.communityTitle">COMMUNITY</h2></div><p class="muted" data-i18n="home.communityIntro">쇼핑 안내와 자주 묻는 질문을 확인해 주세요.</p><div id="community-content"></div></section>
+    <section id="editorial-campaign" aria-label="EDITORIAL CAMPAIGN" hidden><picture><source media="(max-width:800px)"><img loading="lazy" alt="브랜드 에디토리얼 캠페인"></picture></section>
+    <section id="shop-secondary" aria-label="두 번째 상품 슬라이더"><div id="products-secondary" class="products product-slider" tabindex="0" aria-label="상품을 좌우로 탐색"></div></section>
+    <section id="archive" class="collection-journal" tabindex="-1"><h2>COLLECTION JOURNAL</h2><div id="journal-categories"></div></section>
+    <section hidden id="about" class="about" tabindex="-1"><p>YOUR LABEL</p><h2 data-i18n="home.aboutTagline">남들과 다른 결. 방향은 분명하게.</h2><p data-i18n="home.aboutDescription">일상의 실루엣을 다시 바라보는 독립 스트릿웨어.</p></section>
+    <section hidden id="community" class="community" tabindex="-1"><div class="section-title"><h2 data-i18n="home.communityTitle">COMMUNITY</h2></div><p class="muted" data-i18n="home.communityIntro">쇼핑 안내와 자주 묻는 질문을 확인해 주세요.</p><div id="community-content"></div></section>
   </main>
 
   <footer class="store-footer">

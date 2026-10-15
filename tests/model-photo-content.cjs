@@ -144,7 +144,7 @@ function stored() { return JSON.parse(row.data); }
       if (request.method === 'GET' && media.has(pathname)) {
         const file = media.get(pathname); response.writeHead(200, { 'Content-Type': file.type }); response.end(file.bytes); return;
       }
-      const files = { '/admin': ['legacy/admin.html', 'text/html'], '/admin.js': ['public/admin.js', 'text/javascript'], '/admin.css': ['public/admin.css', 'text/css'], '/assets/products.png': ['public/assets/products.png', 'image/png'], '/assets/campaign.png': ['public/assets/campaign.png', 'image/png'], '/assets/campaign-wide.png': ['public/assets/campaign-wide.png', 'image/png'] };
+      const files = { '/homepage-admin.js': ['public/homepage-admin.js', 'text/javascript'], '/admin': ['legacy/admin.html', 'text/html'], '/admin.js': ['public/admin.js', 'text/javascript'], '/admin.css': ['public/admin.css', 'text/css'], '/assets/products.png': ['public/assets/products.png', 'image/png'], '/assets/campaign.png': ['public/assets/campaign.png', 'image/png'], '/assets/campaign-wide.png': ['public/assets/campaign-wide.png', 'image/png'] };
       if (request.method === 'GET' && files[pathname]) {
         const [filename, type] = files[pathname]; response.writeHead(200, { 'Content-Type': type }); response.end(fs.readFileSync(path.join(root, filename))); return;
       }
