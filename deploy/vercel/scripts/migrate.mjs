@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { hostedClient, migrationPlan, ledger, tables, extraTables, isMain, fail } from './database-tools.mjs';
+import { randomUUID } from 'node:crypto';
 
 export async function initializeDatabase(client) {
   const plan = await migrationPlan();
@@ -14,7 +15,15 @@ export async function initializeDatabase(client) {
   }
   if (names.length) throw new Error('Initialization requires a new empty database. Existing tables were found; no changes were made.');
   const now = new Date().toISOString();
-  const statements = [{sql:`CREATE TABLE ${ledger}(migration TEXT PRIMARY KEY NOT NULL,sha256 TEXT NOT NULL,applied_at TEXT NOT NULL)`,args:[]}];
+  // A second empty check runs inside the same write transaction as every
+  // CREATE. A concurrent initializer or foreign table cannot slip between
+  // the read above and schema creation. Failure rolls the whole batch back.
+  const guard = 'street_label_deploy_guard_' + randomUUID().replaceAll('-', '');
+  const statements = [
+    {sql:`CREATE TEMP TABLE ${guard}(existing_table_count INTEGER NOT NULL CHECK(existing_table_count=0))`,args:[]},
+    {sql:`INSERT INTO ${guard}(existing_table_count) SELECT count(*) FROM main.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'`,args:[]},
+    {sql:`CREATE TABLE ${ledger}(migration TEXT PRIMARY KEY NOT NULL,sha256 TEXT NOT NULL,applied_at TEXT NOT NULL)`,args:[]},
+  ];
   for (const item of plan) {
     statements.push(...item.statements.map(sql => ({sql,args:[]})));
     statements.push({sql:`INSERT INTO ${ledger}(migration,sha256,applied_at) VALUES(?,?,?)`,args:[item.name,item.sha256,now]});

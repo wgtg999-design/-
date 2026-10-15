@@ -136,7 +136,7 @@ try {
     const value = await fixture('success', { ownerEmail: () => ' OWNER-PRIVATE@EXAMPLE.TEST ', accountState: async () => verified('OWNER-PRIVATE@example.test') });
     try {
       const response = await value.handler(request());
-      assert.equal(response.headers.get('location'), '/setup');
+      assert.equal(response.headers.get('location'), '/signup', 'Successful preparation continues membership registration instead of repeating setup.');
       await inspectResponse(response, 303);
       await assertInitialized(value.client);
       assert.equal(value.calls.batch, 1);

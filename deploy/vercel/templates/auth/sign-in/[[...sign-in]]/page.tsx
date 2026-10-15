@@ -3,6 +3,7 @@ import { authConfigured, getChatGPTUser, getClerkAccountState, safeRelativeRetur
 import { getClerkPublishableKey } from '../../../../runtime/auth-config';
 import AuthUI from '../../ui';
 import AuthUnavailable from '../../unavailable';
+import AccountConnectionPending from '../../connection-pending';
 
 export const dynamic = 'force-dynamic';
 export default async function SignInPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
@@ -11,7 +12,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
   const account = await getClerkAccountState();
   if (account.status === 'verified') {
     if (next === '/setup' || await getChatGPTUser()) redirect(next);
-    redirect('/setup');
+    return <AccountConnectionPending next={next} />;
   }
   if (account.status === 'unverified') redirect(`/auth/verify-email?next=${encodeURIComponent(next)}`);
   if (account.status === 'unavailable') return <AuthUnavailable />;

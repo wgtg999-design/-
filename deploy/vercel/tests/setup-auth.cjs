@@ -13,8 +13,10 @@ delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE;
 
 let configured = true, accountStatus = 'verified', mappedUser = null;
 let accountCalls = 0, identityCalls = 0, scenarios = 0;
+let componentLanguage = 'ko';
 function AuthUI() { return null; }
 function AuthUnavailable() { return null; }
+function AccountConnectionPending() { return null; }
 class Redirect extends Error { constructor(target) { super('Synthetic redirect'); this.target = target; } }
 
 const cache = new Map();
@@ -26,6 +28,9 @@ function load(file, page = false) {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
   }).outputText;
   const localRequire = id => {
+    if (id === 'react' && file.endsWith('connection-pending.tsx')) return {
+      useEffect() {}, useState: () => [componentLanguage, () => {}],
+    };
     if (page) {
       if (id === '../../../../runtime/auth') return {
         authConfigured: () => configured,
@@ -40,6 +45,7 @@ function load(file, page = false) {
       };
       if (id === '../../ui') return { __esModule: true, default: AuthUI };
       if (id === '../../unavailable') return { __esModule: true, default: AuthUnavailable };
+      if (id === '../../connection-pending') return { __esModule: true, default: AccountConnectionPending };
     }
     if (id === 'next/navigation') return { redirect(target) { throw new Redirect(target); } };
     // Load the production return-path sanitizer without calling an external
@@ -75,6 +81,14 @@ async function expectUnavailable(page, next, calls) {
   assert.equal(identityCalls, calls);
   scenarios++;
 }
+async function expectConnectionPending(page, next, safeNext, calls) {
+  const result = await render(page, next);
+  assert.equal(result.element?.type, AccountConnectionPending);
+  assert.equal(result.element.props.next, safeNext);
+  assert.equal(result.location, undefined, 'A temporary identity-store failure must not redirect the customer to setup.');
+  assert.equal(identityCalls, calls);
+  scenarios++;
+}
 
 (async () => {
   for (const mode of ['sign-in', 'sign-up', 'verify-email']) {
@@ -88,13 +102,14 @@ async function expectUnavailable(page, next, calls) {
     reset(); await expectRedirect(page, '/setup', '/setup', 0);
     assert.equal(accountCalls, 1);
 
-    // Verified accounts without a usable DB identity receive the public setup
-    // diagnostic, never access to a requested private route or a fake identity.
+    // Verified accounts without a usable DB identity keep their managed
+    // session and requested destination on a recoverable customer screen.
+    // This grants neither private-page access nor an invented shop identity.
     for (const next of ['/admin', '/account', '/signup', '/account?next=checkout', '/setup?prepare=1', '/setup#prepare', '/setup/extra', '/%73etup', '/SETUP']) {
-      reset(); await expectRedirect(page, next, '/setup', 1);
+      reset(); await expectConnectionPending(page, next, next, 1);
     }
     const defaultPath = mode === 'sign-up' ? '/signup' : '/account';
-    reset(); await expectRedirect(page, undefined, '/setup', 1);
+    reset(); await expectConnectionPending(page, undefined, defaultPath, 1);
     reset({ user: { userId: 'mapped-fixture-user', email: 'verified@example.test' } });
     await expectRedirect(page, undefined, defaultPath, 1);
     for (const next of ['/admin', '/account?next=checkout']) {
@@ -105,7 +120,7 @@ async function expectUnavailable(page, next, calls) {
     // An external or malformed callback never expands the diagnostic bypass
     // and cannot send the user to an attacker-provided origin.
     for (const next of ['https://evil.example.test/setup', '//evil.example.test', '/\\evil.example.test', '/%255cevil.example.test', '/auth/sign-in']) {
-      reset(); await expectRedirect(page, next, '/setup', 1);
+      reset(); await expectConnectionPending(page, next, '/', 1);
       reset({ user: { userId: 'mapped-fixture-user', email: 'verified@example.test' } });
       await expectRedirect(page, next, '/', 1);
     }
@@ -148,7 +163,38 @@ async function expectUnavailable(page, next, calls) {
     assert.equal(identityCalls, 0); scenarios++;
     delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE;
   }
-  console.log(`PASS: ${scenarios} setup authentication callback scenarios; only verified accounts may return to the exact public /setup without DB identity lookup; verified accounts with unavailable identity storage receive diagnostics, private routes remain gated, external callbacks sanitized, resolved-key UI matches canonical precedence, and signed-out/unverified/unavailable states preserve their managed authentication flow.`);
+  const ConnectionUI = load(path.join(base, 'templates/auth/connection-pending.tsx')).default;
+  function descendants(node) {
+    if (!node || typeof node !== 'object') return [];
+    const children = node.props?.children;
+    return [node, ...(Array.isArray(children) ? children : [children]).flatMap(descendants)];
+  }
+  // Exercise the actual recovery component, without mounting Clerk or making
+  // network requests. Retry preserves the sanitized destination; logout only
+  // opens the existing confirmation page and never sends a GET mutation.
+  for (const language of ['ko', 'zh-CN', 'zh-TW', 'ja']) {
+    componentLanguage = language;
+    for (const rawNext of ['/signup', '/account?next=checkout#checkout', '//evil.example.test', '/auth/sign-in']) {
+      const next = safeRelativeReturnPath(rawNext);
+      const tree = descendants(ConnectionUI({ next }));
+      const links = tree.filter(node => node.type === 'a');
+      assert.equal(links.length, 3);
+      const retry = new URL(links[0].props.href, 'https://shop.test');
+      const signout = new URL(links[2].props.href, 'https://shop.test');
+      assert.equal(retry.pathname, '/auth/sign-in');
+      assert.equal(retry.searchParams.get('next'), next);
+      assert.equal(signout.pathname, '/auth/sign-out');
+      assert.equal(signout.searchParams.get('next'), next);
+      assert.equal(links[1].props.href, '/');
+      assert.equal(tree.some(node => node.type === 'form'), false);
+      assert.equal(tree.some(node => node.props?.dangerouslySetInnerHTML), false);
+      assert.ok(tree.find(node => node.type === 'h1')?.props.children);
+      assert.ok(tree.find(node => node.props?.role === 'status')?.props.children);
+      assert.equal(links.some(node => node.props.href === '/setup'), false);
+      scenarios++;
+    }
+  }
+  console.log(`PASS: ${scenarios} setup authentication callback scenarios; only explicit verified /setup returns bypass DB identity lookup; unavailable identity storage keeps verified customers on a recoverable screen with sanitized next, private routes remain gated, resolved-key UI matches canonical precedence, and signed-out/unverified/unavailable states preserve their managed authentication flow.`);
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(() => {
   savedKey === undefined ? delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY : process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY = savedKey;
   savedAlias === undefined ? delete process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE : process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE = savedAlias;

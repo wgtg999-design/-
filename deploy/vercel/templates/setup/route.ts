@@ -43,7 +43,7 @@ export async function GET() {
   ];
   const canInitialize = state.databaseConnected && state.authConfigured && state.ownerBootstrapConfigured && !state.schemaReady;
   const preparation = state.schemaReady
-    ? '<p>DB 테이블이 준비되어 있습니다. 대표님 계정으로 로그인한 뒤 관리자 화면을 열어 주세요.</p>'
+    ? '<p><strong>회원정보 저장 준비가 완료되었습니다.</strong> 아래에서 회원가입을 계속하거나 관리자 화면을 열 수 있습니다.</p><p><a href="/signup">회원가입 계속하기</a> · <a href="/account">내 계정 열기</a></p>'
     : `<p>대표님께서 실제 회원·주문이 없는 새 DB로 시작할 때 사용하는 버튼입니다. 기존 테이블이 있으면 서버가 거부합니다.</p><form method="post" action="/api/setup/initialize"><label><input type="checkbox" name="confirm_new_empty" value="yes" required ${canInitialize ? '' : 'disabled'}> 기존 자료가 없는 새 DB에 저장 테이블을 만드는 것을 확인합니다.</label><p><button type="submit" ${canInitialize ? '' : 'disabled'}>새 DB 준비</button></p></form><p>버튼을 사용하려면 Turso·Clerk 연결과 사이트 주소·관리자 이메일 설정을 먼저 완료하세요. 실제 고객·주문 자료가 있으면 이 버튼 대신 데이터 이전 절차를 진행해야 합니다.</p>`;
   const configurationHelp = state.authConfigured ? '' : '<p><a href="https://vercel.com/123-f2e9/street-label-shop/settings/environment-variables">Vercel에서 표시된 연결값 수정하기</a></p><p>수정한 뒤 Deployments에서 최신 배포의 Redeploy를 실행해야 사이트에 적용됩니다.</p>';
   // Every displayed string is fixed application copy; no database fields or

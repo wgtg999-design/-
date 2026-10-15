@@ -24,7 +24,7 @@ Vercel의 Turso **Connect a Project** 화면에서는 Custom Prefix를 `TURSO`, 
 3. Framework는 **Next.js**, Node.js는 **22.x**로 선택합니다. `vercel.json`에 설치·빌드 명령을 넣어 두었습니다.
 4. 서비스 연결 전에는 실제 회원 등록·주문·관리자 저장이 열리지 않습니다. 먼저 아래 이전 순서를 지키고 운영 환경변수를 등록한 뒤 다시 배포합니다.
 
-설치 명령은 `pnpm install --frozen-lockfile --prod=false`, 빌드 명령은 `pnpm run build`입니다. 이 폴더의 독립적인 `pnpm-workspace.yaml`이 원본 개발 환경과 의존성을 구분합니다. 생성된 `app/`, `lib/`, `public/`, `.next/`를 직접 수정하거나 Git에 저장하지 않습니다.
+설치 명령은 `pnpm install --frozen-lockfile --prod=false`, Vercel 빌드 명령은 `node scripts/provision.mjs && pnpm run build`입니다. `provision.mjs`는 대표님이 위임한 현재 테스트 사이트의 Production 배포만 준비합니다. 확정 도메인·테스트 모드를 대조하며 빈 DB만 초기화하고 기존 자료를 덮어쓰지 않습니다. 관리자 연결은 [로그인 안내](AUTH.md)의 확인된 기존 계정 조건을 따릅니다. 일반 로컬 `pnpm run build`는 DB 준비 작업을 실행하지 않습니다. 이 폴더의 독립적인 `pnpm-workspace.yaml`이 원본 개발 환경과 의존성을 구분합니다. 생성된 `app/`, `lib/`, `public/`, `.next/`를 직접 수정하거나 Git에 저장하지 않습니다.
 
 ## 운영 연결 순서
 
@@ -49,6 +49,7 @@ node deploy/vercel/tests/readiness.cjs
 node deploy/vercel/tests/setup-auth.cjs
 node deploy/vercel/tests/initialize.mjs
 node deploy/vercel/tests/initialization-sql.mjs
+node deploy/vercel/tests/provision.mjs
 node deploy/vercel/tests/database.mjs
 node deploy/vercel/tests/storage-upload.cjs
 node deploy/vercel/tests/image-import.mjs

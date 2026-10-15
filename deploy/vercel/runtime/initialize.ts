@@ -96,7 +96,7 @@ export function createInitializationHandler(dependencies: InitializationDependen
         }
         throw new Error('Initialization did not complete.');
       }
-      return new Response(null, { status: 303, headers: { ...headers, Location: '/setup' } });
+      return new Response(null, { status: 303, headers: { ...headers, Location: '/signup' } });
     } catch {
       return failure(503, '데이터베이스 준비를 완료하지 못했습니다. 운영 연결 확인 화면에서 설정을 확인해 주세요. 기존 테이블이 생겼다면 초기화를 다시 실행하지 마세요.');
     }
