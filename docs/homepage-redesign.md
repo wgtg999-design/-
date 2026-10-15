@@ -25,7 +25,7 @@ Use the authenticated admin **제공된 9개 상품 가져오기** button. Save 
 
 No sizes, materials, measurements or stock are invented. New records have `sizes: []`, so they display but cannot be purchased. Enter actual options under homepage management, then set actual stock and enable sales under order/inventory management. Both customer checkout and the stock API reject made-up options. Existing site test-order closure stays in place.
 
-If journal images are unconfigured at first import, use the operator-supplied jacket/denim model images and supplied blue layered tee image as category navigation images; existing configured images are preserved. These are not newly commissioned editorial images.
+The shared `public/journal-presets.js` fills missing/empty journal images at render time, independently of product import: operator-supplied jacket/denim model images and the supplied blue layered tee image. Existing configured images are preserved, and the legacy middle TOPS assignment maps to TSHIRT. Customer rendering makes no database writes. The editor uses the same effective defaults; its reset action restores the default image. These are not newly commissioned editorial images.
 
 ## Homepage behavior
 

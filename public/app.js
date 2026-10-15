@@ -384,7 +384,7 @@
       section.querySelector('img').src = imageUrl(campaignSettings.image);
       section.querySelector('source').srcset = imageUrl(campaignSettings.mobileImage || campaignSettings.image);
     }
-    const journals = content.homepage?.journals || ['OUTER','TSHIRT','BOTTOMS'].map(category=>({category,image:null}));
+    const journals = window.StoreJournal.entries(content.homepage?.journals);
     $('#journal-categories').innerHTML = journals.map(entry=>`<a href="/shop?category=${entry.category}">${entry.image ? `<picture><source media="(max-width:800px)" srcset="${esc(imageUrl(entry.mobileImage || entry.image))}"><img src="${esc(imageUrl(entry.image))}" alt="${entry.category}" loading="lazy"></picture>` : ''}<span>${['OUTER','T-SHIRT','PANTS'][journals.indexOf(entry)]}</span></a>`).join('');
   }
   function renderSlides() {
