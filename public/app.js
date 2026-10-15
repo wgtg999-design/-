@@ -7,6 +7,9 @@
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = value => I.formatCurrency(value);
   const preview = window.StorePreviewData || null;
+  const media=window.StoreImages||{src:value=>value,srcset:()=>''};
+  const optimized=(value,width=960)=>media.src(value,width);
+  const imageSet=value=>media.srcset(value);
   const imageUrl = value => preview ? preview.assets[value] || value : value;
   const cartKey = preview ? 'your-label-preview-cart' : 'your-label-cart';
   const wishlistKey = preview ? 'your-label-preview-wishlist' : 'your-label-wishlist';
@@ -15,7 +18,7 @@
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
   const pageMode=document.body.dataset.page || 'home';
   const routeProduct=document.body.dataset.productId || '';
-  const categories=['ALL','OUTER','BOTTOMS','TOPS','ACC','KNITWEAR','HOODIES','TSHIRT'];
+  const categories=['ALL','OUTER','BOTTOMS','TOPS','ACC','KNITWEAR','HOODIES','TSHIRT','SKIRTS'];
   const campaign = $('.hero'), sidebar = $('#site-sidebar');
   let campaignVisible = true, sidebarFrame = 0;
   function updateSidebarBackground() {
@@ -74,8 +77,11 @@
     // outfit from its name, position in the list, or an unrelated lookbook.
     const source = /^\/(assets\/[a-zA-Z0-9._-]+|media\/[a-f0-9-]+\.(png|jpg|webp))$/.test(product.modelImage || '') ? imageUrl(product.modelImage) : '';
     const focus = ['upper','lower'].includes(product.modelFocus) ? product.modelFocus : 'center';
-    const model = source ? `<img class="packshot-model-layer" src="${esc(source)}" data-focus="${focus}" alt="" aria-hidden="true" loading="${isDetail ? 'eager' : 'lazy'}" decoding="async">` : '';
-    return `<div class="product-photo packshot ${product.image === '/assets/products.png' ? product.crop : 'custom-photo'}" style="background-image:url('${esc(imageUrl(product.image))}')" role="img" aria-label="${esc(label(product, 'name'))}"><span class="packshot-stage" aria-hidden="true"></span>${product.image !== '/assets/products.png' ? `<img class="product-original-layer" src="${esc(imageUrl(product.image))}" alt="" loading="${isDetail?'eager':'lazy'}" decoding="async">` : ''}${model}<span class="product-index">${String(products.indexOf(product) + 1).padStart(2, '0')}</span></div>`;
+    const sizes=isDetail?'(max-width:800px) 100vw, 50vw':pageMode==='shop'?'(max-width:800px) 50vw, 25vw':'(max-width:800px) 50vw, 33.333vw';
+    const model = source ? `<img class="packshot-model-layer" data-model-source="${esc(imageUrl(optimized(product.modelImage,isDetail?1600:960)))}" data-model-set="${esc(imageSet(product.modelImage))}" sizes="${sizes}" ${isDetail?'data-eager-model="true"':''} data-focus="${focus}" alt="" aria-hidden="true" decoding="async">` : '';
+    const base=product.image==='/assets/products.png'?`style="background-image:url('${esc(imageUrl(optimized(product.image,1600)))}')"`:'style="background-image:none"';
+    const original=product.image!=='/assets/products.png'?`<img class="product-original-layer" src="${esc(imageUrl(optimized(product.image,isDetail?1600:960)))}" srcset="${esc(imageSet(product.image))}" sizes="${sizes}" alt="" loading="${isDetail?'eager':'lazy'}" decoding="async">`:'';
+    return `<div class="product-photo packshot ${product.image === '/assets/products.png' ? product.crop : 'custom-photo'}" ${base} role="img" aria-label="${esc(label(product,'name'))}"><span class="packshot-stage" aria-hidden="true"></span>${original}${model}<span class="product-index">${String(products.indexOf(product) + 1).padStart(2, '0')}</span></div>`;
   }
   function bindModelPhotos(root) {
     root.querySelectorAll('.packshot-model-layer').forEach(image => {
@@ -97,9 +103,14 @@
           }
         } catch { failed(); }
       };
+      let requested=false;
+      const request=()=>{if(requested||!image.dataset.modelSource)return;requested=true;if(image.dataset.modelSet)image.srcset=image.dataset.modelSet;image.src=image.dataset.modelSource;};
+      const card=image.closest('.product-card')||holder;
+      card.addEventListener('pointerenter',request,{once:true});card.addEventListener('focusin',request,{once:true});card.addEventListener('touchstart',request,{once:true,passive:true});
+      if(image.dataset.eagerModel)request();
       image.addEventListener('load', ready, {once:true});
       image.addEventListener('error', failed, {once:true});
-      if (image.complete) { if (image.naturalWidth) ready(); else failed(); }
+      if (image.getAttribute('src')&&image.complete) { if (image.naturalWidth) ready(); else failed(); }
     });
   }
   function favoriteButton(product) {
@@ -395,7 +406,7 @@
   }
   $('#hero-photo').addEventListener('load',updateHeroInk);
   window.addEventListener('resize',()=>{updateHeroInk();document.querySelectorAll('#journal-categories a').forEach(link=>{const image=link.querySelector('img');if(image?.naturalWidth)adaptImageText(image,link,link.dataset.textTone,'--journal-ink',[.4,.65,1,1]);});},{passive:true});
-  function heroSource(index) { return imageUrl((mobile.matches && content.homepage?.banners[index]?.mobileImage) || content.heroImages[index]); }
+  function heroSource(index) { return imageUrl(optimized((mobile.matches && content.homepage?.banners[index]?.mobileImage) || content.heroImages[index],Math.ceil(innerWidth*devicePixelRatio))); }
   function updateHeroLink() {
     $('#hero-link').href = '/shop';
   }
@@ -405,11 +416,11 @@
     const section = $('#editorial-campaign');
     section.hidden = campaignSettings.enabled===false || !campaignSettings.image;
     if (campaignSettings?.image) {
-      section.querySelector('img').src = imageUrl(campaignSettings.image);
-      section.querySelector('source').srcset = imageUrl(campaignSettings.mobileImage || campaignSettings.image);
+      section.querySelector('img').src = imageUrl(optimized(campaignSettings.image,1600));section.querySelector('img').srcset=imageSet(campaignSettings.image);section.querySelector('img').sizes='100vw';
+      section.querySelector('source').srcset=imageSet(campaignSettings.mobileImage||campaignSettings.image)||imageUrl(optimized(campaignSettings.mobileImage||campaignSettings.image,960));section.querySelector('source').sizes='100vw';
     }
     const journals = window.StoreJournal.entries(content.homepage?.journals);
-    $('#journal-categories').innerHTML = journals.map((entry,index)=>`<a href="/shop?category=${entry.category}" data-text-tone="${entry.textTone||'auto'}">${entry.image ? `<picture><source media="(max-width:800px)" srcset="${esc(imageUrl(entry.mobileImage || entry.image))}"><img src="${esc(imageUrl(entry.image))}" alt="${entry.category}" loading="lazy"></picture>` : ''}<span class="journal-copy"><strong>${esc(entry.title||['OUTER','T-SHIRT','PANTS'][index])}</strong><small>${esc(content.homepage?.journalSeason??'WINTER BEST')}</small></span></a>`).join('');
+    $('#journal-categories').innerHTML = journals.map((entry,index)=>`<a href="/shop?category=${entry.category}" data-text-tone="${entry.textTone||'auto'}">${entry.image ? `<picture><source media="(max-width:800px)" srcset="${esc(imageSet(entry.mobileImage||entry.image)||imageUrl(optimized(entry.mobileImage||entry.image,960)))}"><img src="${esc(imageUrl(optimized(entry.image,960)))}" srcset="${esc(imageSet(entry.image))}" sizes="33.333vw" alt="${entry.category}" loading="lazy"></picture>` : ''}<span class="journal-copy"><strong>${esc(entry.title||['OUTER','T-SHIRT','PANTS'][index])}</strong><small>${esc(content.homepage?.journalSeason??'WINTER BEST')}</small></span></a>`).join('');
     $('#journal-categories').querySelectorAll('a').forEach(link=>{
       const image=link.querySelector('img');if(!image)return;
       const update=()=>adaptImageText(image,link,link.dataset.textTone,'--journal-ink',[.4,.65,1,1]);
@@ -421,7 +432,7 @@
     if (!content?.heroImages.length) return;
     if (!heroInitialized) {
       const source = heroSource(currentSlide);
-      $('#hero-photo').src = source; $('#hero-photo-next').src = source; heroInitialized = true;
+      const hero=$('#hero-photo');hero.removeAttribute('srcset');const mobileSource=hero.closest('picture')?.querySelector('source');if(mobileSource)mobileSource.removeAttribute('srcset');if(hero.getAttribute('src')!==source)hero.src=source;heroInitialized = true;
     }
     $('#hero-photo').alt = content.brand + ' — ' + t('home.collection');
     renderHomepageMedia();
@@ -433,8 +444,8 @@
     try {
       if (preview) { content = preview.content; inventory = []; }
       else {
-        const response = await fetch('/api/content',{cache:'no-store'}); if (!response.ok) throw Error();
-        content = (await response.json()).content;
+        if(window.StoreInitialContent)content=window.StoreInitialContent.content;
+        else{const response=await fetch('/api/content',{cache:'no-store'});if(!response.ok)throw Error();content=(await response.json()).content;}
         await Promise.all([
           fetch('/api/shop?view=stock',{cache:'no-store'}).then(async response => { if (response.ok) inventory = (await response.json()).inventory || []; }).catch(() => {}),
           fetch('/api/shop?view=settings',{cache:'no-store'}).then(async response => { if (response.ok) shopSettings = (await response.json()).settings; }).catch(() => {}),

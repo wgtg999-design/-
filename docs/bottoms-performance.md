@@ -1,0 +1,9 @@
+# Numbered bottoms import and image delivery
+
+The two supplied ZIPs contain base images 01, 02, 03, 05, 09, 11 and model images 01, 02, 03, 05, 08, 09, 11. Original bytes and hashes are recorded in bottoms-assets.json. Twelve exact English names and prices are defined in lib/bottoms-import.ts. Missing-base products remain hidden drafts; no sizes or stock are invented. Existing products, edits, orders and inventory are preserved. Repeating the import does not overwrite existing entries.
+
+An authenticated owner must use Admin → 신규 하의 12개 가져오기 to persist the batch to the production database. This environment has no owner session. No production import has been claimed or performed by tests. Numbers 04, 06, 07, 10, 12 require both images; 08 requires its base image. The newly requested wide hero is only available inline in chat, not as a downloadable original, and has not been substituted with another image.
+
+Run node scripts/optimize-images.mjs to regenerate content-hashed responsive WebP derivatives using the installed Next sharp dependency. Original PNG files remain unchanged. Across 31 originals, 67,854,374 bytes become 3,364,768 bytes for the 960px delivery variants (95% smaller image pool, not a site-speed percentage). Hashed derivatives have immutable cache headers. Initial HTML supplies the current hero and visible catalogue; the old hardcoded hero no longer triggers an early PNG request. Model photos load on interaction and decode before the existing fade.
+
+Validation: catalog import/security/idempotency and hidden-image checks; local Chromium desktop/mobile storefront, cart, hover, admin persistence and initial network checks; SQL-backed commerce API, order transitions and migration constraints; production Next build. Tests use isolated fixtures. Production authenticated import and purchase flows require an owner/customer session and are not represented as browser-verified here.

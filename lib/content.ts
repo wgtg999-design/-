@@ -8,7 +8,7 @@ function socialLink(hosts:string[]){return z.string().trim().max(500).refine(val
  try{const url=new URL(value),authority=value.match(/^https:\/\/([^/?#]*)/i)?.[1];return url.protocol==='https:'&&!url.username&&!url.password&&!url.port&&!!authority&&/^[a-zA-Z0-9.-]+$/.test(authority)&&authority.toLowerCase()===url.hostname&&hosts.includes(url.hostname)}catch{return false}
 },'공식 Instagram 또는 카카오 HTTPS 주소를 입력하세요. 계정 정보나 포트가 포함된 주소는 사용할 수 없습니다.');}
 const socialLinks=z.object({instagram:socialLink(['instagram.com','www.instagram.com']),kakao:socialLink(['pf.kakao.com','open.kakao.com','kakao.com','www.kakao.com'])}).strict();
-const categoryKey=z.enum(['OUTER','BOTTOMS','TOPS','ACC','KNITWEAR','HOODIES','TSHIRT']);
+const categoryKey=z.enum(['OUTER','BOTTOMS','TOPS','ACC','KNITWEAR','HOODIES','TSHIRT','SKIRTS']);
 const destination=z.string().max(300).refine(x=>x===''||/^\/(?!\/)[a-zA-Z0-9/_?=&%#.-]*$/.test(x)||/^#[a-zA-Z0-9_-]+$/.test(x),'사이트 내부 주소만 입력하세요.');
 const tone=z.enum(['auto','light','dark']);
 const homepage=z.object({
@@ -22,8 +22,8 @@ export const contentSchema=z.object({
  brand:z.string().trim().min(1).max(35),notice:z.string().max(120),aboutTitle:z.string().max(100),aboutText:z.string().max(500),
  socialLinks:socialLinks.optional(),translations:brandTranslations.optional(),
  homepage:homepage.optional(),heroImages:z.array(localImage).min(1).max(5),journalImage:localImage,
- products:z.array(z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,60}$/),name:z.string().trim().min(1).max(100),color:z.string().max(50),category:z.enum(['OUTER','BOTTOMS','TOPS','ACC','KNITWEAR','HOODIES','TSHIRT']),price:z.number().int().min(0).max(100000000),description:z.string().max(2000),sizes:z.array(z.string().trim().min(1).max(20)).max(12),image:localImage,crop:z.enum(['','right','bottom','bottom right']),modelImage:localImage.nullable().optional(),modelFocus:z.enum(['upper','lower','center']).optional(),visible:z.boolean(),featured:z.boolean().optional(),sizeGuide:z.string().max(4000).optional(),translations:productTranslations.optional()})).max(100)
-}).refine(v=>new Set(v.products.map(p=>p.id)).size===v.products.length,'상품 ID가 중복되었습니다.').refine(v=>!v.homepage||v.homepage.banners.length===v.heroImages.length,'배너 설정 개수를 확인하세요.').refine(v=>!v.homepage||[v.homepage.slider01,v.homepage.slider02??[]].every(ids=>new Set(ids).size===ids.length&&ids.every(id=>v.products.some(p=>p.id===id))),'슬라이더는 중복 없이 등록된 상품만 지정하세요.');
+ products:z.array(z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,60}$/),name:z.string().trim().min(1).max(100),color:z.string().max(50),category:z.enum(['OUTER','BOTTOMS','TOPS','ACC','KNITWEAR','HOODIES','TSHIRT','SKIRTS']),price:z.number().int().min(0).max(100000000),description:z.string().max(2000),sizes:z.array(z.string().trim().min(1).max(20)).max(12),image:localImage,crop:z.enum(['','right','bottom','bottom right']),modelImage:localImage.nullable().optional(),modelFocus:z.enum(['upper','lower','center']).optional(),visible:z.boolean(),featured:z.boolean().optional(),sizeGuide:z.string().max(4000).optional(),translations:productTranslations.optional()})).max(100)
+}).refine(v=>v.products.every(p=>p.image!=='/assets/product-image-pending.svg'||!p.visible),'기본 사진이 없는 상품은 공개할 수 없습니다.').refine(v=>new Set(v.products.map(p=>p.id)).size===v.products.length,'상품 ID가 중복되었습니다.').refine(v=>!v.homepage||v.homepage.banners.length===v.heroImages.length,'배너 설정 개수를 확인하세요.').refine(v=>!v.homepage||[v.homepage.slider01,v.homepage.slider02??[]].every(ids=>new Set(ids).size===ids.length&&ids.every(id=>v.products.some(p=>p.id===id))),'슬라이더는 중복 없이 등록된 상품만 지정하세요.');
 export type Content=z.infer<typeof contentSchema>;
 // Numbered original photographs supplied by the operator. The ID and original
 // sample packshot must both match; sorting never changes the photo assignment.

@@ -16,6 +16,7 @@ function busyState(value){
     const action=element.dataset.action,index=Number(element.dataset.index),list=action.startsWith('hero')?content?.heroImages:content?.products;
     if(list)element.disabled=value||(action.endsWith('up')&&index===0)||(action.endsWith('down')&&index===list.length-1);
   });
+  document.querySelectorAll('[data-key="visible"]').forEach(element=>element.disabled=value||content?.products[Number(element.dataset.product)]?.image==='/assets/product-image-pending.svg');
   document.querySelectorAll('[data-key="modelFocus"]').forEach(element=>element.disabled=value||!content?.products[Number(element.dataset.product)]?.modelImage);
 }
 async function api(path,options){
@@ -62,13 +63,13 @@ function productCard(product,index){
 <label>상품명 (English)<input data-product="${index}" data-key="name" value="${esc(product.name)}" maxlength="100"></label>
 <label>가격 (원)<input type="number" min="0" max="100000000" step="1" data-product="${index}" data-key="price" value="${product.price}"></label>
 <label>색상<input data-product="${index}" data-key="color" value="${esc(product.color)}" maxlength="50"></label>
-<label>분류<select data-product="${index}" data-key="category">${['OUTER','BOTTOMS','TOPS','ACC','KNITWEAR','HOODIES','TSHIRT'].map(category=>`<option ${category===product.category?'selected':''}>${category}</option>`).join('')}</select></label>
+<label>분류<select data-product="${index}" data-key="category">${['OUTER','BOTTOMS','TOPS','ACC','KNITWEAR','HOODIES','TSHIRT','SKIRTS'].map(category=>`<option ${category===product.category?'selected':''}>${category}</option>`).join('')}</select></label>
 <label class="wide">실제 사이즈 (쉼표로 구분 · 미정이면 비워 두세요)<input data-product="${index}" data-key="sizes" value="${esc(product.sizes.join(', '))}" placeholder="S, M, L"></label>
 <label class="wide">상품 설명<textarea rows="3" maxlength="2000" data-product="${index}" data-key="description">${esc(product.description)}</textarea></label>
 <label class="wide">실측·사이즈 안내<textarea rows="4" maxlength="4000" data-product="${index}" data-key="sizeGuide" placeholder="실제 측정한 항목, 단위와 사이즈별 치수를 입력하세요.">${esc(product.sizeGuide)}</textarea></label>
 <p class="editor-help wide">실측 안내를 비워 두면 고객에게 ‘사이즈 안내 준비 중’으로 표시합니다. 측정하지 않은 수치는 임의로 넣지 마세요.</p>
 <div class="translation-editor wide"><div class="translation-heading"><h3>언어별 상품 정보</h3><label>편집할 언어<select data-product-locale="${index}">${localeOptions(locale)}</select></label></div><p class="editor-help">비워 둔 번역 항목은 기본 상품 정보를 사용합니다.</p><div class="fields" data-product-translations="${index}">${translatedFields(product,locale,productFields,index)}</div></div>
-<div class="card-actions"><label><input type="checkbox" data-product="${index}" data-key="visible" ${product.visible?'checked':''}>홈페이지에 표시</label><label><input type="checkbox" data-product="${index}" data-key="featured" ${product.featured===true?'checked':''}>BEST 운영자 추천</label><button data-action="up" data-index="${index}">↑ 위로</button><button data-action="down" data-index="${index}">↓ 아래로</button><button class="danger" data-action="remove" data-index="${index}">상품 삭제</button></div>
+<div class="card-actions"><label><input type="checkbox" data-product="${index}" data-key="visible" ${product.visible?'checked':''} ${product.image==='/assets/product-image-pending.svg'?'disabled':''}>홈페이지에 표시${product.image==='/assets/product-image-pending.svg'?' (기본 사진 필요)':''}</label><label><input type="checkbox" data-product="${index}" data-key="featured" ${product.featured===true?'checked':''}>BEST 운영자 추천</label><button data-action="up" data-index="${index}">↑ 위로</button><button data-action="down" data-index="${index}">↓ 아래로</button><button class="danger" data-action="remove" data-index="${index}">상품 삭제</button></div>
 </div></article>`;
 }
 function render(){
@@ -206,4 +207,10 @@ $('#preview-homepage').onclick=()=>{
  const invalid=document.querySelector(':invalid');if(invalid){invalid.reportValidity();return;}
  const form=document.createElement('form');form.method='POST';form.action='/admin/preview';form.target='_blank';form.hidden=true;
  const field=document.createElement('input');field.name='content';field.value=JSON.stringify(content);form.append(field);document.body.append(form);form.submit();form.remove();
+};
+
+$('#import-bottoms').onclick=async()=>{
+ if(busy||!content)return;if(dirty){status('편집 내용을 먼저 저장하거나 다시 불러온 뒤 가져오세요.',true);return;}
+ busyState(true);status('번호에 맞춘 하의 12개 상품을 가져오는 중…');
+ try{const result=await api('/api/admin/catalog-import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,batch:'bottoms-12'})});await load();status(`새 상품 ${result.added.length}개 저장 · 기존 ${result.skipped.length}개 유지. 기본 사진이 없는 상품은 숨김 초안이며, 실제 옵션과 재고가 있어야 구매할 수 있습니다.`);}catch(error){status(error.message,true)}finally{busyState(false)}
 };

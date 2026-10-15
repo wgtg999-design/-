@@ -1,0 +1,93 @@
+[
+  {
+    "number": 1,
+    "kind": "base",
+    "asset": "/assets/bottoms-01-base.png",
+    "sha256": "e2672235494b19843b54b5aa8f8ce666945a9973f32a26e615d9a075ed8b4965",
+    "bytes": 2782294
+  },
+  {
+    "number": 2,
+    "kind": "base",
+    "asset": "/assets/bottoms-02-base.png",
+    "sha256": "a1b2548680f70757e7b7775bb0f0a722fd64d1f237e4ab9b95438d758b7d34a2",
+    "bytes": 2554569
+  },
+  {
+    "number": 3,
+    "kind": "base",
+    "asset": "/assets/bottoms-03-base.png",
+    "sha256": "0ca5edda675a72c7bdaece69516d7444e08ba877526598ebbe301d83a9c8a710",
+    "bytes": 2142024
+  },
+  {
+    "number": 5,
+    "kind": "base",
+    "asset": "/assets/bottoms-05-base.png",
+    "sha256": "9b8a81d2055b9f075b23683caccc2f0c8bd73a95a73b31a5a2e6ef4a193e49d8",
+    "bytes": 2230061
+  },
+  {
+    "number": 9,
+    "kind": "base",
+    "asset": "/assets/bottoms-09-base.png",
+    "sha256": "932932217d689f566fac95af74900344f19165dd35c7fdd2af92567657f2a568",
+    "bytes": 2286310
+  },
+  {
+    "number": 11,
+    "kind": "base",
+    "asset": "/assets/bottoms-11-base.png",
+    "sha256": "9e85e75708868bafe60d3e15713fcfe1fff14eda3e8563ea64081294f1b2b52b",
+    "bytes": 2323534
+  },
+  {
+    "number": 1,
+    "kind": "model",
+    "asset": "/assets/bottoms-01-model.png",
+    "sha256": "5da4b1074a26273f678133b1e2b13814b6d3c2a853548a38361b303d62927bf0",
+    "bytes": 2154495
+  },
+  {
+    "number": 2,
+    "kind": "model",
+    "asset": "/assets/bottoms-02-model.png",
+    "sha256": "f47fe2120014cf8e76d02bd076df0acf8ed5365724af821a86393c24e601a206",
+    "bytes": 2181866
+  },
+  {
+    "number": 3,
+    "kind": "model",
+    "asset": "/assets/bottoms-03-model.png",
+    "sha256": "b828a9ae87802f4ed1988257e7918867cbd70d2dfccfe90a800dd8421376b88a",
+    "bytes": 1943582
+  },
+  {
+    "number": 5,
+    "kind": "model",
+    "asset": "/assets/bottoms-05-model.png",
+    "sha256": "c8298189785645ad3d69d4232e574fed78078ccf70ef83cbd25391a2fce4c135",
+    "bytes": 2048369
+  },
+  {
+    "number": 8,
+    "kind": "model",
+    "asset": "/assets/bottoms-08-model.png",
+    "sha256": "b2c3dfe8aeff2f5c788260f0015177a98beddae60f0d92d242361b045b76e352",
+    "bytes": 2031162
+  },
+  {
+    "number": 9,
+    "kind": "model",
+    "asset": "/assets/bottoms-09-model.png",
+    "sha256": "5bb3add12b9c97572cc575114fa8ce99e5bae3ca34b55936a1a6c7b9eb148858",
+    "bytes": 1850933
+  },
+  {
+    "number": 11,
+    "kind": "model",
+    "asset": "/assets/bottoms-11-model.png",
+    "sha256": "9144272b45e9c588228d3f666f2ecaaec6574d7d23dfc726040f0a55a7b5d8f9",
+    "bytes": 1951668
+  }
+]

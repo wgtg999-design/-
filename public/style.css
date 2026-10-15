@@ -320,3 +320,5 @@ body.menu-is-open{overflow:hidden}
 /* The original top-row sprite includes a narrow sliver of the pants row. */
 .product-photo.packshot:not(.bottom):not(.custom-photo)::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4%;background:#e4e3e1;pointer-events:none;z-index:0}
 @media(max-width:800px){.journal-copy strong{font-size:clamp(13px,3.6vw,22px)}.journal-copy small{font-size:8px;margin-top:5px;letter-spacing:.03em}}
+#hero-link>picture{display:block;position:absolute;inset:0}
+#hero-photo:not([src]){visibility:hidden}

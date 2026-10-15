@@ -6,6 +6,7 @@
   <meta name="description" content="독립 스트릿 의류 브랜드를 위한 쇼핑몰 디자인 시안. 가상 상품과 AI 룩북을 사용합니다.">
   <title>YOUR LABEL — Independent Uniform</title>
   <link rel="stylesheet" href="/style.css">
+  <script src="/image-variants.js" defer></script>
   <script src="/i18n.js" defer></script>
   <script src="/journal-presets.js" defer></script>
   <script src="/app.js" defer></script>
@@ -47,8 +48,8 @@
   <main class="store-main">
     <h1 class="sr-only">YOUR LABEL — Collection 001</h1>
     <section class="hero" aria-label="컬렉션 룩북">
-      <a id="hero-link" href="/shop" aria-label="캠페인 보기"><img id="hero-photo" src="/assets/campaign-wide.png" alt="스테인리스 공간에서 촬영한 세 모델의 가로형 AI 패션 캠페인" fetchpriority="high">
-      <img id="hero-photo-next" src="/assets/campaign-wide.png" alt="" aria-hidden="true" hidden>
+      <a id="hero-link" href="/shop" aria-label="캠페인 보기"><img id="hero-photo" alt="스테인리스 공간에서 촬영한 세 모델의 가로형 AI 패션 캠페인" fetchpriority="high">
+      <img id="hero-photo-next" alt="" aria-hidden="true" hidden>
       </a><p class="notice">COLLECTION 001 — INDEPENDENT UNIFORM</p>
       <div class="campaign-caption"><span data-i18n="home.collection">COLLECTION 001</span><a href="/shop" data-i18n="home.discover">DISCOVER ↗</a></div>
       <div class="hero-controls">
@@ -69,7 +70,7 @@
           <button data-category="OUTER" aria-pressed="false" data-i18n="category.OUTER">OUTER</button>
           <button data-category="BOTTOMS" aria-pressed="false" data-i18n="category.BOTTOMS">BOTTOMS</button>
           <button data-category="TSHIRT" aria-pressed="false">T-SHIRT</button><button data-category="KNITWEAR" aria-pressed="false">KNITWEAR</button><button data-category="HOODIES" aria-pressed="false">HOODIES</button><button data-category="TOPS" aria-pressed="false" data-i18n="category.TOPS">TOPS</button>
-          <button data-category="ACC" aria-pressed="false" data-i18n="category.ACC">ACC</button>
+          <button data-category="SKIRTS" aria-pressed="false">SKIRTS</button><button data-category="ACC" aria-pressed="false" data-i18n="category.ACC">ACC</button>
         </div>
         <label class="sort"><span data-i18n="home.sort">SORT</span><select id="sort" aria-label="상품 정렬" data-i18n-aria-label="home.sort"><option value="default" data-i18n="home.sortDefault">기본순</option><option value="low" data-i18n="home.sortLow">낮은 가격순</option><option value="high" data-i18n="home.sortHigh">높은 가격순</option></select></label>
       </div>
