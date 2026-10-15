@@ -377,9 +377,9 @@
   }
   function renderHomepageMedia() {
     updateHeroLink();
-    const campaignSettings = content.homepage?.campaign;
+    const campaignSettings = window.StoreCampaign.settings(content.homepage?.campaign);
     const section = $('#editorial-campaign');
-    section.hidden = !campaignSettings?.image;
+    section.hidden = campaignSettings.enabled===false || !campaignSettings.image;
     if (campaignSettings?.image) {
       section.querySelector('img').src = imageUrl(campaignSettings.image);
       section.querySelector('source').srcset = imageUrl(campaignSettings.mobileImage || campaignSettings.image);

@@ -14,4 +14,10 @@
     });
   }
   window.StoreJournal=Object.freeze({entries});
+  const source='/assets/editorial-brutalist-monochrome.png';
+  function campaign(saved) {
+    const enabled=saved?.enabled!==false;
+    return {image:saved?.image||(enabled?source:null),mobileImage:saved?.mobileImage??null,enabled};
+  }
+  window.StoreCampaign=Object.freeze({source,settings:campaign});
 })();

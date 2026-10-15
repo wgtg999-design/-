@@ -33,7 +33,10 @@ Hero changes every 4000ms with 400ms fades; hover, focused keyboard interaction,
 
 One nonwrapping horizontal rail: desktop thirds, mobile halves, zero gaps, subtle 1px separators; mouse drag/native touch swipe and arrow-key navigation. English product name, price, QUICK ADD + appear at the bottom on hover/focus without changing image geometry. Touch devices show accessible controls. Image clicks navigate to individual pages; QUICK ADD opens the existing option selector/cart. No second rail is rendered or managed; old slider02 JSON remains optional for compatibility.
 
-Campaign is a single intrinsic-aspect-ratio image with optional mobile source and no shopping overlays. No fallback to unrelated artwork. The final supplied composite was visible in the conversation but had no downloadable image-file attachment in this environment: original PNG/JPG is still required, so the campaign remains hidden until it is registered. No recreation or generation was performed.
+Campaign is a single intrinsic-aspect-ratio image with optional mobile source and no shopping overlays. The supplied ZIP now provides the exact 1536×1024 PNG at `/assets/editorial-brutalist-monochrome.png` (original bytes, SHA-256 in `docs/campaign-asset.json`). Shared media presets apply it when campaign settings have no image, without a database write. Saved custom images/mobile variants take precedence. `campaign.enabled: false` explicitly hides it, including across save/reload; removing the PC image sets that flag and uploading a replacement enables it. Existing null-image settings inherit the newly supplied artwork.
+
+Administrator brand and product language selectors now default to Korean (`ko`), including the static HTML initial option. Other translation languages and saved translations remain available; customer-facing product names remain English.
+
 
 ## Verification
 

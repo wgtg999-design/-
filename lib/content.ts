@@ -13,7 +13,7 @@ const destination=z.string().max(300).refine(x=>x===''||/^\/(?!\/)[a-zA-Z0-9/_?=
 const homepage=z.object({
  banners:z.array(z.object({mobileImage:localImage.nullable().optional(),href:destination}).strict()).max(5),
  slider01:z.array(z.string().max(60)).max(10),slider02:z.array(z.string().max(60)).max(10).optional(),
- campaign:z.object({image:localImage.nullable(),mobileImage:localImage.nullable()}).strict(),
+ campaign:z.object({image:localImage.nullable(),mobileImage:localImage.nullable(),enabled:z.boolean().optional()}).strict(),
  journals:z.array(z.object({image:localImage.nullable(),mobileImage:localImage.nullable().optional(),category:categoryKey}).strict()).length(3)
 }).strict();
 export const contentSchema=z.object({
