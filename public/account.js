@@ -48,7 +48,7 @@ function validateName(input){input.setCustomValidity(input.value.trim().length>=
 function bindProfileValidation(form,nameField){
   if(!form)return;
   const phone=form.elements.namedItem('phone'),name=form.elements.namedItem(nameField);
-  phone.addEventListener('input',()=>validatePhone(phone));name.addEventListener('input',()=>validateName(name));
+  phone?.addEventListener('input',()=>validatePhone(phone));name.addEventListener('input',()=>validateName(name));
 }
 
 function refreshLanguage(){
@@ -68,7 +68,7 @@ function refreshLanguage(){
     const form=$(selector);if(!form)continue;
     const phone=form.elements.namedItem('phone'),name=form.elements.namedItem(field);
     // Preserve untouched fields and update any existing custom validation message.
-    if(phone.validity.customError)validatePhone(phone);
+    if(phone?.validity.customError)validatePhone(phone);
     if(name.validity.customError)validateName(name);
   }
 }
@@ -112,7 +112,6 @@ function renderProfile(){
     ${!policiesReady?`<p class="notice">${text(p?'auth.prepareUpdate':'auth.prepare')}</p><div class="actions"><button id="policy-retry" type="button" data-i18n="auth.checkAgain">${esc(t('auth.checkAgain'))}</button><a href="/" class="text-link">${text('account.shop')}</a></div>`:`<form id="profile-form">
       <div class="fields">
         <label>${text('auth.name')}<input name="name" required minlength="2" maxlength="60" autocomplete="name" value="${esc(p?.name)}"></label>
-        <label>${text('auth.phone')}<input name="phone" type="tel" inputmode="tel" required maxlength="25" autocomplete="tel" placeholder="010-0000-0000" value="${esc(p?.phone)}"></label>
       </div>
       <div class="policy-group">
         <details><summary>${text('auth.terms')}</summary>${originalSetting('terms','terms')}</details>
@@ -129,17 +128,17 @@ function renderProfile(){
 
 async function saveProfile(e){
   e.preventDefault();if(profileSaving)return;
-  const f=e.currentTarget;validateName(f.elements.namedItem('name'));validatePhone(f.elements.namedItem('phone'));if(!f.reportValidity())return;
+  const f=e.currentTarget;validateName(f.elements.namedItem('name'));if(!f.reportValidity())return;
   const values=new FormData(f),b=f.querySelector('button[type="submit"]'),wasMember=!!data.profile;
   profileSaving=true;f.setAttribute('aria-busy','true');b.disabled=true;
   setText(b,wasMember?'account.saving':'auth.registering');feedback(wasMember?'account.savePending':'auth.registerPending');
   try{
-    const name=String(values.get('name')).trim(),phone=String(values.get('phone')).trim();
-    await api('/api/shop',{action:'register',name,phone,consent:values.has('terms')&&values.has('privacy'),revision:data.revision});
+    const name=String(values.get('name')).trim();
+    await api('/api/shop',{action:'register',name,consent:values.has('terms')&&values.has('privacy'),revision:data.revision});
     if(!wasMember){
       $('#profile').innerHTML=`<h2 id="profile-title" tabindex="-1">${text('auth.complete')}</h2><p class="muted">${text('auth.welcome',{name})}</p><div class="actions"><a class="primary signup-start" href="${accountPath}">${text(checkoutIntent?'auth.continueCheckout':'auth.goAccount')}</a><a class="text-link" href="/">${text('account.shop')}</a></div>`;
       pageStatus(checkoutIntent?'status.completeCheckout':'status.completeAccount');$('#profile-title').focus();I.apply();
-    }else{data.profile={...data.profile,name,phone};feedback('account.saved');pageStatus('account.saved')}
+    }else{data.profile={...data.profile,name};feedback('account.saved');pageStatus('account.saved')}
   }catch(err){
     feedbackError(err);if(err.status===401){$('#load-actions').hidden=false;$('#load-login').hidden=false;$('#load-login').href=loginLink()}
   }finally{profileSaving=false;f.setAttribute('aria-busy','false');b.disabled=false;setText(b,wasMember?'account.save':'auth.register')}

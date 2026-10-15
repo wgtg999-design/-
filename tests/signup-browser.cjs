@@ -34,9 +34,8 @@ async function consent(page) {
   await page.locator('[name=terms]').check();
   await page.locator('[name=privacy]').check();
 }
-async function profileForm(page, name, phone) {
+async function profileForm(page, name) {
   await page.locator('[name=name]').fill(name);
-  await page.locator('[name=phone]').fill(phone);
   await consent(page);
 }
 async function check(label, work) {
@@ -135,24 +134,17 @@ async function check(label, work) {
       assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('your-label-cart'))), [{ id: 'jacket', size: 'M', qty: 1 }]);
     });
 
-    await check('Whitespace-only name and phone cannot create a member', async () => {
-      await profileForm(page, '        ', '01012345678');
+    await check('Phone-free signup still refuses whitespace-only names', async () => {
+      await profileForm(page, '        ');
+      assert.equal(await page.locator('#profile-form [name=phone]').count(), 0);
       await page.locator('#profile-form button[type=submit]').click();
       assert.equal((await api(c, '/api/shop')).data.profile, null);
       assert.equal(await page.locator('#profile-form').count(), 1);
       assert.equal(await page.locator('[name=name]').evaluate(input => input.validationMessage), '이름을 2글자 이상 입력해 주세요.');
-      await profileForm(page, '테스트회원', '        ');
-      await page.locator('#profile-form button[type=submit]').click();
-      assert.equal((await api(c, '/api/shop')).data.profile, null);
-      assert.equal(await page.locator('[name=phone]').evaluate(input => input.validity.valid), false);
-      await profileForm(page, '테스트회원', '--------');
-      await page.locator('#profile-form button[type=submit]').click();
-      assert.equal((await api(c, '/api/shop')).data.profile, null);
-      assert.equal(await page.locator('[name=phone]').evaluate(input => input.validity.valid), false);
     });
 
     await check('Failed signup reports an error, preserves typed values and enables retry', async () => {
-      await profileForm(page, '테스트회원', '010-1234-5678');
+      await profileForm(page, '테스트회원');
       await page.route('**/api/shop', async route => {
         if (route.request().method() === 'POST' && route.request().postDataJSON().action === 'register') {
           await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'QA 일시적인 저장 실패입니다. 다시 시도하세요.' }) });
@@ -161,7 +153,7 @@ async function check(label, work) {
       await page.locator('#profile-form button[type=submit]').click();
       await waitText(page, '#profile-feedback', 'QA 일시적인 저장 실패');
       assert.equal(await page.locator('[name=name]').inputValue(), '테스트회원');
-      assert.equal(await page.locator('[name=phone]').inputValue(), '010-1234-5678');
+      assert.equal(await page.locator('#profile-form [name=phone]').count(), 0);
       assert(await page.locator('[name=terms]').isChecked());
       assert(await page.locator('[name=privacy]').isChecked());
       assert(await page.locator('#profile-form button[type=submit]').isEnabled());
@@ -187,6 +179,7 @@ async function check(label, work) {
       await waitText(page, '#profile-title', '회원가입이 완료되었습니다.');
       await page.unroute('**/api/shop');
       assert.equal((await api(c, '/api/shop')).data.profile.name, '테스트회원');
+      assert.equal((await api(c, '/api/shop')).data.profile.phone, '');
       const next = await page.locator('#profile .signup-start').getAttribute('href');
       assert.equal(next, '/account?next=checkout#checkout');
       await page.screenshot({ path: path.join(output, 'signup-success.png'), fullPage: true });
@@ -198,6 +191,8 @@ async function check(label, work) {
       await page.waitForURL('**/account?next=checkout#checkout');
       await page.locator('#order-form').waitFor();
       assert.equal(await page.locator('#order-form [name=recipient]').inputValue(), '테스트회원');
+      assert.equal(await page.locator('#order-form [name=phone]').inputValue(), '');
+      await page.locator('#order-form [name=phone]').fill('010-1234-5678');
       await page.locator('#order-form [name=postcode]').fill('01234');
       await page.locator('#order-form [name=line1]').fill('QA 전용 테스트 주소 123');
       await page.locator('#order-form [name=line2]').fill('QA 101호');
@@ -216,13 +211,13 @@ async function check(label, work) {
     });
 
     await check('Own member information updates and survives a page refresh', async () => {
-      await profileForm(page, '수정한회원', '010-9876-5432');
+      await profileForm(page, '수정한회원');
       await page.locator('#profile-form button[type=submit]').click();
       await waitText(page, '#profile-feedback', '회원정보를 저장했습니다.');
       await page.reload();
       await page.locator('#profile-form').waitFor();
       assert.equal(await page.locator('[name=name]').inputValue(), '수정한회원');
-      assert.equal(await page.locator('[name=phone]').inputValue(), '010-9876-5432');
+      assert.equal(await page.locator('#profile-form [name=phone]').count(), 0);
       assert((await page.locator('.order-id').textContent()).includes(orderId));
     });
 
@@ -269,7 +264,7 @@ async function check(label, work) {
       const normal = await context({ 'oai-authenticated-user-id': `browser-normal-${run}`, 'oai-authenticated-user-email': 'browser-normal@example.test' }), normalPage = await normal.newPage();
       await normalPage.goto('/signup');
       await normalPage.locator('#profile-form').waitFor();
-      await profileForm(normalPage, '일반가입회원', '01011112222');
+      await profileForm(normalPage, '일반가입회원');
       await normalPage.locator('#profile-form button[type=submit]').click();
       await waitText(normalPage, '#profile-title', '회원가입이 완료되었습니다.');
       assert.equal(await normalPage.locator('#profile .signup-start').getAttribute('href'), '/account#profile');

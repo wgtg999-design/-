@@ -116,8 +116,16 @@ async function rejectRegistration(payload, origin = 'https://shop.test', message
   }
   assert.equal(count(), 0);
 
+  // Membership needs no telephone or SMS. The existing NOT NULL column is
+  // retained without a migration; a new account simply stores an empty value.
+  let response = await commerce.shopPost(post({ action: 'register', name: 'Alice Test', consent: true, revision }));
+  assert.equal(response.status, 200);
+  assert.equal(count(), 1);
+  assert.equal(profile(alice.userId).phone, '');
+  assert.equal((await (await commerce.shopGet(get())).json()).profile.phone, '');
+
   // The trusted session chooses both the member ID and email, ignoring input.
-  let response = await commerce.shopPost(post({ ...registration(revision), phone: ' 01000000001 ', userId: bob.userId, user_id: bob.userId, email: bob.email }));
+  response = await commerce.shopPost(post({ ...registration(revision), phone: ' 01000000001 ', userId: bob.userId, user_id: bob.userId, email: bob.email }));
   assert.equal(response.status, 200);
   assert.equal(profile(alice.userId).email, alice.email);
   assert.equal(profile(bob.userId), undefined);
@@ -147,6 +155,9 @@ async function rejectRegistration(payload, origin = 'https://shop.test', message
   assert.equal(aliceUpdated.created_at, createdAt);
   assert.equal(aliceUpdated.consent_version, revision);
   assert.equal((await (await commerce.shopGet(get())).json()).profile.phone, '01000000002');
+  response = await commerce.shopPost(post({ action: 'register', name: 'Alice Updated', consent: true, revision }));
+  assert.equal(response.status, 200);
+  assert.deepEqual({ ...profile(alice.userId) }, aliceUpdated, 'Phone-free edits retain the original contact and join time rather than erasing existing data');
 
   // A second authenticated customer cannot read or overwrite the first member.
   identity = bob;
@@ -171,7 +182,7 @@ async function rejectRegistration(payload, origin = 'https://shop.test', message
     items: [{ id: 'jacket', size: 'M', qty: 1 }],
     address: { name: 'Alice Test', phone: ' 010-0000-0002 ', postcode: '01234', line1: 'Synthetic Test Street', line2: 'Test Room', memo: '' },
   };
-  for (const phone of ['        ', '--------', '010-----', '1234567']) {
+  for (const phone of [undefined, '', '        ', '--------', '010-----', '1234567']) {
     response = await commerce.shopPost(post({ ...orderDraft, address: { ...orderDraft.address, phone } }));
     assert.equal(response.status, 400, 'Delivery contact needs at least eight actual digits');
     assert.equal(db.prepare('SELECT count(*) AS n FROM shop_orders').get().n, 0);
@@ -207,6 +218,6 @@ async function rejectRegistration(payload, origin = 'https://shop.test', message
   assert.equal((await (await commerce.shopGet(get('?view=settings'))).json()).revision, orderRevision);
   assert.equal((await commerce.adminGet(get())).status, 200);
 
-  console.log('PASS: isolated SQL-backed signup policy, consent/origin/auth/version denial, trusted identity binding, member persistence/upsert, customer profile/order isolation, and pinned administrator protection.');
+  console.log('PASS: phone-free membership persistence, legacy contact preservation, required delivery telephone, SQL-backed signup policy, consent/origin/auth/version denial, trusted identity binding, customer profile/order isolation, and pinned administrator protection.');
   db.close();
 })().catch(error => { console.error(error); db.close(); process.exitCode = 1; });

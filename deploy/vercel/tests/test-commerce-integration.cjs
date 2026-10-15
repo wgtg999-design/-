@@ -112,7 +112,7 @@ async function deniedWithoutChanges(callback, status) {
 function savedSettings(value, revision = 7) {
   fixture.prepare('INSERT INTO shop_settings(key,data,revision) VALUES (?,?,?) ON CONFLICT(key) DO UPDATE SET data=excluded.data,revision=excluded.revision').run('main', JSON.stringify(value), revision);
 }
-const signup = { action: 'register', name: '시험 회원', phone: '00000000', consent: true, revision: 0 };
+const signup = { action: 'register', name: '시험 회원', consent: true, revision: 0 };
 const realSettings = { accepting: true, shippingFee: 0, bankInfo: 'Fixture bank text', support: 'Fixture support', terms: 'Fixture operator terms', privacy: 'Fixture operator privacy', returnGuide: 'Fixture return guide' };
 
 (async () => {
@@ -147,7 +147,7 @@ const realSettings = { accepting: true, shippingFee: 0, bankInfo: 'Fixture bank 
   const register = await commerce.shopPost(request({ ...signup, userId: bob.userId, email: bob.email }));
   assert.equal(register.status, 200, await register.clone().text());
   const aliceRow = fixture.prepare('SELECT * FROM shop_customers WHERE user_id=?').get(alice.userId);
-  assert.equal(aliceRow.email, alice.email); assert.equal(aliceRow.name, signup.name); assert.equal(aliceRow.phone, signup.phone);
+  assert.equal(aliceRow.email, alice.email); assert.equal(aliceRow.name, signup.name); assert.equal(aliceRow.phone, '');
   assert.equal(aliceRow.consent_version, 0); assert(aliceRow.created_at);
   assert.equal(fixture.prepare('SELECT count(*) AS n FROM shop_customers').get().n, 1);
   assert.equal(fixture.prepare('SELECT * FROM shop_customers WHERE user_id=?').get(bob.userId), undefined); checks++;

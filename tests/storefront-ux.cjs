@@ -226,13 +226,13 @@ async function close(page, id) { await page.locator(`#${id} .close`).click(); }
     await check('Account languages keep entered data, original policies and in-flight signup/order/cancel requests safe', async () => {
       const member = await context(customer), formPage = await member.newPage();
       await formPage.goto('/signup?next=checkout'); await formPage.locator('#profile-form').waitFor();
-      await formPage.locator('[name=name]').fill('QA 가입회원'); await formPage.locator('[name=phone]').fill('01012345678');
+      await formPage.locator('[name=name]').fill('QA 가입회원');
       await formPage.locator('[name=terms]').check(); await formPage.locator('[name=privacy]').check();
       await formPage.locator('#profile details').first().evaluate(el => { el.open = true; });
       for (const locale of ['zh-CN', 'zh-TW', 'ja']) {
         await formPage.locator('[data-language-select]').selectOption(locale);
         assert.equal(await formPage.locator('[name=name]').inputValue(), 'QA 가입회원');
-        assert.equal(await formPage.locator('[name=phone]').inputValue(), '01012345678');
+        assert.equal(await formPage.locator('#profile-form [name=phone]').count(), 0);
         assert(await formPage.locator('[name=terms]').isChecked());
         assert.equal(await formPage.locator('#profile details').first().evaluate(el => el.open), true);
         assert((await formPage.locator('#profile .terms').first().textContent()).includes(settings.terms));
@@ -255,6 +255,8 @@ async function close(page, id) { await page.locator(`#${id} .close`).click(); }
       assert.equal((await api(member, '/api/shop')).payload.profile.name, 'QA 가입회원');
       await formPage.evaluate(() => localStorage.setItem('your-label-cart', JSON.stringify([{ id: 'jacket', size: 'M', qty: 1 }])));
       await formPage.locator('#profile .signup-start').click(); await formPage.locator('#order-form').waitFor();
+      assert.equal(await formPage.locator('#order-form [name=phone]').inputValue(), '');
+      await formPage.locator('#order-form [name=phone]').fill('01012345678');
       await formPage.locator('#order-form [name=postcode]').fill('01234');
       await formPage.locator('#order-form [name=line1]').fill('QA 유지되는 테스트 배송지');
       await formPage.locator('#order-form [name=line2]').fill('QA 101호');
