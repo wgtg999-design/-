@@ -8,6 +8,8 @@ r=await c.adminPost(req({action:'stock',id:'jacket',size:'M',stock:2,maxOrder:1,
 identity=alice;assert.equal((await c.adminPost(req({action:'stock'}))).status,403);
 await c.shopPost(req({action:'register',name:'Alice',phone:'01000000000',consent:true,revision:1}));
 const draft={action:'create',requestKey:crypto.randomUUID(),expectedTotal:132000,settingsRevision:1,consent:true,items:[{id:'jacket',size:'M',qty:1}],address:{name:'Alice',phone:'01000000000',postcode:'01234',line1:'Test address street',line2:'Room 1',memo:''}};
+const {defaults}=load('lib/content.ts'),{mergeSuppliedProducts}=load('lib/catalog-import.ts');const supplied=mergeSuppliedProducts(defaults).content;db.prepare('INSERT INTO store_content(key,data,revision,updated_at) VALUES(?,?,?,?)').run('main',JSON.stringify(supplied),1,'fixture');
+const orderCountBefore=db.prepare('SELECT count(*) AS n FROM shop_orders').get().n;assert.equal((await c.shopPost(req({...draft,requestKey:crypto.randomUUID(),expectedTotal:72000,items:[{id:'destroyed-knit-sweater-black',size:'FREE',qty:1}]}))).status,400,'An invented option cannot buy an incomplete supplied product');assert.equal(db.prepare('SELECT count(*) AS n FROM shop_orders').get().n,orderCountBefore);identity=owner;assert.equal((await c.adminPost(req({action:'stock',id:'destroyed-knit-sweater-black',size:'FREE',stock:100,maxOrder:3,enabled:true,revision:0}))).status,400,'Inventory for an invented option must be rejected');identity=alice;
 assert.equal((await c.shopPost(req({...draft,expectedTotal:1}))).status,400);
 assert.equal((await c.shopPost(req({...draft,items:[{id:'jacket',size:'M',qty:2}],expectedTotal:261000}))).status,409);
 r=await c.shopPost(req(draft));assert.equal(r.status,201);const order=(await r.json()).order;

@@ -2,7 +2,7 @@ const $=selector=>document.querySelector(selector);
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const locales=[['ko','한국어'],['zh-CN','简体中文 · 중국어 간체'],['zh-TW','繁體中文 · 중국어 번체'],['ja','日本語 · 일본어']];
 const brandFields=[['notice','상단 안내 문구',120],['aboutTitle','소개 제목',100],['aboutText','소개 문구',500]];
-const productFields=[['name','상품명',100],['color','색상',50],['description','상품 설명',2000],['sizeGuide','실측·사이즈 안내',4000]];
+const productFields=[['color','색상',50],['description','상품 설명',2000],['sizeGuide','실측·사이즈 안내',4000]];
 const productLocales=new Map();
 let content,revision=0,dirty=false,busy=false,brandLocale='zh-CN';
 const status=(message,error=false)=>{$('#status').textContent=message;$('#status').classList.toggle('error',error)};
@@ -58,12 +58,12 @@ function modelPhoto(product,index){
 }
 function productCard(product,index){
   const locale=productLocale(product);
-  return `<article class="product-card"><div class="product-photo"><h3>기본 상품 사진</h3><div class="photo ${product.image==='/assets/products.png'?'sheet '+product.crop:''}" style="background-image:url('${esc(product.image)}')" role="img" aria-label="상품 사진"></div><div class="visual-actions"><label class="button">사진 교체<input type="file" hidden accept="image/jpeg,image/png,image/webp" data-upload="product" data-index="${index}"></label></div>${modelPhoto(product,index)}</div><div class="product-fields">
-<label>상품명<input data-product="${index}" data-key="name" value="${esc(product.name)}" maxlength="100"></label>
+  return `<article class="product-card">${!product.sizes.length?'<p class="editor-help wide">옵션 미등록 · 구매 불가. 실제 사이즈를 입력한 뒤 주문·재고 관리에서 재고와 판매 설정을 저장하세요.</p>':''}<div class="product-photo"><h3>기본 상품 사진</h3><div class="photo ${product.image==='/assets/products.png'?'sheet '+product.crop:''}" style="background-image:url('${esc(product.image)}')" role="img" aria-label="상품 사진"></div><div class="visual-actions"><label class="button">사진 교체<input type="file" hidden accept="image/jpeg,image/png,image/webp" data-upload="product" data-index="${index}"></label></div>${modelPhoto(product,index)}</div><div class="product-fields">
+<label>상품명 (English)<input data-product="${index}" data-key="name" value="${esc(product.name)}" maxlength="100"></label>
 <label>가격 (원)<input type="number" min="0" max="100000000" step="1" data-product="${index}" data-key="price" value="${product.price}"></label>
 <label>색상<input data-product="${index}" data-key="color" value="${esc(product.color)}" maxlength="50"></label>
-<label>분류<select data-product="${index}" data-key="category">${['OUTER','BOTTOMS','TOPS','ACC'].map(category=>`<option ${category===product.category?'selected':''}>${category}</option>`).join('')}</select></label>
-<label class="wide">사이즈 (쉼표로 구분)<input data-product="${index}" data-key="sizes" value="${esc(product.sizes.join(', '))}" placeholder="S, M, L"></label>
+<label>분류<select data-product="${index}" data-key="category">${['OUTER','BOTTOMS','TOPS','ACC','KNITWEAR','HOODIES','TSHIRT'].map(category=>`<option ${category===product.category?'selected':''}>${category}</option>`).join('')}</select></label>
+<label class="wide">실제 사이즈 (쉼표로 구분 · 미정이면 비워 두세요)<input data-product="${index}" data-key="sizes" value="${esc(product.sizes.join(', '))}" placeholder="S, M, L"></label>
 <label class="wide">상품 설명<textarea rows="3" maxlength="2000" data-product="${index}" data-key="description">${esc(product.description)}</textarea></label>
 <label class="wide">실측·사이즈 안내<textarea rows="4" maxlength="4000" data-product="${index}" data-key="sizeGuide" placeholder="실제 측정한 항목, 단위와 사이즈별 치수를 입력하세요.">${esc(product.sizeGuide)}</textarea></label>
 <p class="editor-help wide">실측 안내를 비워 두면 고객에게 ‘사이즈 안내 준비 중’으로 표시합니다. 측정하지 않은 수치는 임의로 넣지 마세요.</p>
@@ -123,7 +123,7 @@ document.addEventListener('click',event=>{
   const index=Number(button.dataset.index),action=button.dataset.action;
   if(action==='remove'){
     if(!confirm('이 상품을 목록에서 삭제할까요? 저장해야 반영됩니다.'))return;
-    const [removed]=content.products.splice(index,1);if(removed){productLocales.delete(removed.id);if(content.homepage)for(const key of ['slider01','slider02'])content.homepage[key]=content.homepage[key].filter(id=>id!==removed.id);}
+    const [removed]=content.products.splice(index,1);if(removed){productLocales.delete(removed.id);if(content.homepage)for(const key of ['slider01','slider02'])if(content.homepage[key])content.homepage[key]=content.homepage[key].filter(id=>id!==removed.id);}
   }else if(action==='hero-remove'){
     if(content.heroImages.length===1){status('메인 사진은 최소 1장이 필요합니다.',true);return}
     content.heroImages.splice(index,1);
@@ -175,11 +175,12 @@ document.addEventListener('change',async event=>{
 $('#add-product').onclick=()=>{
   if(busy||!content)return;
   if(content.products.length>=100){status('상품은 최대 100개까지 등록할 수 있습니다.',true);return}
-  content.products.unshift({id:crypto.randomUUID(),name:'새 상품',price:0,color:'',category:'TOPS',sizes:['FREE'],description:'',image:'/assets/products.png',crop:'',visible:false});
+  content.products.unshift({id:crypto.randomUUID(),name:'New Product',price:0,color:'',category:'TOPS',sizes:[],description:'',image:'/assets/products.png',crop:'',visible:false});
   mark();render();$('#catalog').scrollIntoView();
 };
 $('#save').onclick=async()=>{
   if(busy||!content||!dirty)return;
+  if(content.products.some(p=>!/[A-Za-z]/.test(p.name)||!/^[\x20-\x7E\u2010-\u2015\u2018-\u201D]+$/.test(p.name))){status('상품명은 영어로 입력하세요.',true);return;}
   if(document.querySelector(':invalid')){document.querySelector(':invalid').reportValidity();return;}
   busyState(true);status('변경사항을 저장하고 있습니다…');
   try{
@@ -192,3 +193,17 @@ $('#save').onclick=async()=>{
 $('#reload').onclick=()=>{if(!busy&&(!dirty||confirm('저장하지 않은 편집 내용을 버리고 다시 불러올까요?')))load()};
 window.addEventListener('beforeunload',event=>{if(dirty||busy){event.preventDefault();event.returnValue=''}});
 load();
+
+$('#import-supplied').onclick=async()=>{
+ if(busy||!content)return;
+ if(dirty){status('편집 중인 내용을 먼저 저장하거나 다시 불러온 뒤 가져오세요.',true);return;}
+ busyState(true);status('제공된 9개 상품을 안전하게 가져오는 중…');
+ try{const result=await api('/api/admin/catalog-import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision})});await load();status(`새 상품 ${result.added.length}개 저장 · 기존 상품 ${result.skipped.length}개 유지. 실제 옵션과 재고를 입력하기 전에는 구매할 수 없습니다.`);}catch(error){status(error.message,true)}finally{busyState(false)}
+};
+
+$('#preview-homepage').onclick=()=>{
+ if(!content||busy)return;
+ const invalid=document.querySelector(':invalid');if(invalid){invalid.reportValidity();return;}
+ const form=document.createElement('form');form.method='POST';form.action='/admin/preview';form.target='_blank';form.hidden=true;
+ const field=document.createElement('input');field.name='content';field.value=JSON.stringify(content);form.append(field);document.body.append(form);form.submit();form.remove();
+};

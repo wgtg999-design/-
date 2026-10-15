@@ -19,7 +19,7 @@ function emailHtml(html){return html.replaceAll('/signout-with-chatgpt?return_to
 for(const name of ['app','lib','public'])fs.rmSync(path.join(target,name),{recursive:true,force:true});
 const migrations=await migrationPlan();
 write('lib/initialization-plan.ts','// Generated public schema metadata; no credentials or operating records.\nexport const initializationPlan = '+JSON.stringify({ledger,migrations})+' as const;\n');
-for(const name of ['admin','commerce','content','order-sql','order-state','store']){
+for(const name of ['admin','commerce','content','catalog-import','order-sql','order-state','store']){
   const output=path.join(target,'lib',name+'.ts');
   let text=fs.readFileSync(path.join(source,'lib',name+'.ts'),'utf8');
   text=text.replaceAll("'cloudflare:workers'",JSON.stringify(relative(output,path.join(target,'runtime/environment'))));

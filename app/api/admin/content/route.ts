@@ -5,7 +5,7 @@ import {contentSchema,defaults} from '../../../../lib/content';
 export const dynamic='force-dynamic';
 export async function GET(){const d=await guard();if(d)return d;return Response.json(await readStore(),{headers:noCache});}
 export async function PUT(req:Request){const d=await guard(req);if(d)return d;
- try{const body=JSON.parse(new TextDecoder().decode(await limitedBody(req,400000)));if(!Number.isInteger(body.revision)||body.revision<0)throw Error('잘못된 저장 버전입니다.');const content=contentSchema.parse(body.content);const now=new Date().toISOString();
+ try{const body=JSON.parse(new TextDecoder().decode(await limitedBody(req,400000)));if(!Number.isInteger(body.revision)||body.revision<0)throw Error('잘못된 저장 버전입니다.');const content=contentSchema.parse(body.content);if(content.products.some(p=>!/[A-Za-z]/.test(p.name)||!/^[\x20-\x7E\u2010-\u2015\u2018-\u201D]+$/.test(p.name)))throw Error('상품명은 영어로 입력하세요.');const now=new Date().toISOString();
  await env.DB.prepare('INSERT OR IGNORE INTO store_content (key,data,revision,updated_at) VALUES (?,?,0,?)').bind('main',JSON.stringify(defaults),now).run();
  const row=await env.DB.prepare('UPDATE store_content SET data=?, revision=revision+1, updated_at=? WHERE key=? AND revision=? RETURNING revision').bind(JSON.stringify(content),now,'main',body.revision).first<{revision:number}>();
  if(!row)return Response.json({error:'다른 창에서 수정되었습니다. 편집 내용을 복사해 두고 새로고침한 뒤 다시 저장해 주세요.'},{status:409,headers:noCache});

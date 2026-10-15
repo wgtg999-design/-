@@ -73,6 +73,8 @@
     'category.OUTER': ['OUTER', '外套', '外套', 'アウター'],
     'category.BOTTOMS': ['BOTTOMS', '下装', '下身', 'ボトムス'],
     'category.TOPS': ['TOPS', '上装', '上衣', 'トップス'],
+    'cart.quantity': ['수량','数量','數量','数量'],
+    'product.variantsPending': ['옵션·재고 준비 중입니다. 현재 구매할 수 없습니다.','选项及库存准备中，暂不可购买。','選項與庫存準備中，暫不可購買。','オプション・在庫準備中のため購入できません。'],
     'category.ACC': ['ACC', '配饰', '配飾', 'アクセサリー'],
     'common.originalNotice': ['운영자가 등록한 원문 안내입니다.', '以下为运营者发布的原文说明。', '以下為營運者發布的原文說明。', '以下は運営者が登録した案内の原文です。'],
     'common.connectionPending': ['연결 준비 중', '连接准备中', '連結準備中', '接続準備中'],
@@ -332,6 +334,7 @@
   function formatNumber(value, options) { return new Intl.NumberFormat(localeNames[language], options).format(Number(value)); }
   function formatCurrency(value) { return '₩' + formatNumber(value, {maximumFractionDigits: 0}); }
   function catalogValue(item, field) {
+    if(field==='name')return item?.name??'';
     const translated = item?.translations?.[language]?.[field];
     return typeof translated === 'string' && translated.trim() ? translated : item?.[field] ?? '';
   }

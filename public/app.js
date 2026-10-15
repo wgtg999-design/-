@@ -7,17 +7,20 @@
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = value => I.formatCurrency(value);
   const preview = window.StorePreviewData || null;
-  const imageUrl = value => preview ? preview.assets[value] || '' : value;
+  const imageUrl = value => preview ? preview.assets[value] || value : value;
   const cartKey = preview ? 'your-label-preview-cart' : 'your-label-cart';
   const wishlistKey = preview ? 'your-label-preview-wishlist' : 'your-label-wishlist';
   const mobile = matchMedia('(max-width: 800px)');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
   const finePointer = matchMedia('(hover: hover) and (pointer: fine)');
+  const pageMode=document.body.dataset.page || 'home';
+  const routeProduct=document.body.dataset.productId || '';
+  const categories=['ALL','OUTER','BOTTOMS','TOPS','ACC','KNITWEAR','HOODIES','TSHIRT'];
   const campaign = $('.hero'), sidebar = $('#site-sidebar');
   let campaignVisible = true, sidebarFrame = 0;
   function updateSidebarBackground() {
     const rect = campaign.getBoundingClientRect(), desktop = !mobile.matches;
-    const progress = desktop ? Math.min(1, Math.max(0, -rect.top / Math.max(1, rect.height * .72))) : 0;
+    const progress = desktop && pageMode !== 'home' ? 1 : desktop ? Math.min(1, Math.max(0, -rect.top / Math.max(1, rect.height * .72))) : 0;
     const open = sidebar.classList.contains('open');
     // Keep an actively used keyboard menu visible until focus leaves it.
     const pinned = desktop && !open && sidebar.contains(document.activeElement) && document.activeElement.matches(':focus-visible');
@@ -72,7 +75,7 @@
     const source = /^\/(assets\/[a-zA-Z0-9._-]+|media\/[a-f0-9-]+\.(png|jpg|webp))$/.test(product.modelImage || '') ? imageUrl(product.modelImage) : '';
     const focus = ['upper','lower'].includes(product.modelFocus) ? product.modelFocus : 'center';
     const model = source ? `<img class="packshot-model-layer" src="${esc(source)}" data-focus="${focus}" alt="" aria-hidden="true" loading="${isDetail ? 'eager' : 'lazy'}" decoding="async">` : '';
-    return `<div class="product-photo packshot ${product.image === '/assets/products.png' ? product.crop : 'custom-photo'}" style="background-image:url('${esc(imageUrl(product.image))}')" role="img" aria-label="${esc(label(product, 'name'))}"><span class="packshot-stage" aria-hidden="true"></span>${model}<span class="product-index">${String(products.indexOf(product) + 1).padStart(2, '0')}</span></div>`;
+    return `<div class="product-photo packshot ${product.image === '/assets/products.png' ? product.crop : 'custom-photo'}" style="background-image:url('${esc(imageUrl(product.image))}')" role="img" aria-label="${esc(label(product, 'name'))}"><span class="packshot-stage" aria-hidden="true"></span>${product.image !== '/assets/products.png' ? `<img class="product-original-layer" src="${esc(imageUrl(product.image))}" alt="" loading="${isDetail?'eager':'lazy'}" decoding="async">` : ''}${model}<span class="product-index">${String(products.indexOf(product) + 1).padStart(2, '0')}</span></div>`;
   }
   function bindModelPhotos(root) {
     root.querySelectorAll('.packshot-model-layer').forEach(image => {
@@ -116,12 +119,12 @@
     const title = $('.section-title h2'); title.removeAttribute('data-i18n');
     title.textContent = t(view === 'best' ? 'shop.bestTitle' : view === 'wishlist' ? 'shop.wishlistTitle' : 'shop.productTitle');
     const settings = content.homepage;
-    const card = product => `<article class="product-card"><button class="product" data-product="${esc(product.id)}" aria-label="${esc(label(product,'name'))}">${photo(product)}</button><div class="quick-panel"><p>${money(product.price)}</p><button type="button" data-product="${esc(product.id)}">QUICK ADD</button></div>${favoriteButton(product)}</article>`;
-    const choose = ids => ids === undefined || category !== 'ALL' || search || view !== 'all' ? list.slice(0,10) : ids.map(id=>list.find(p=>p.id===id)).filter(Boolean).slice(0,10);
-    $('#products').innerHTML = choose(settings?.slider01).map(card).join('');
-    $('#products-secondary').innerHTML = choose(settings?.slider02).map(card).join('');
-    bindModelPhotos($('#products')); bindModelPhotos($('#products-secondary'));
-    $('#empty').hidden = list.length > 0;
+    const card = product => `<article class="product-card"><a class="product" href="/products/${encodeURIComponent(product.id)}" aria-label="${esc(label(product,'name'))}">${photo(product)}</a><div class="quick-panel"><h3>${esc(label(product,'name'))}</h3><p>${money(product.price)}</p><button type="button" data-product="${esc(product.id)}">QUICK ADD +</button></div>${pageMode==='shop'?favoriteButton(product):''}</article>`;
+    const choose = ids => ids === undefined ? list.slice(0,10) : ids.map(id=>list.find(p=>p.id===id)).filter(Boolean).slice(0,10);
+    const displayed = pageMode === 'home' ? choose(settings?.slider01) : list;
+    $('#products').innerHTML = displayed.map(card).join('');
+    bindModelPhotos($('#products'));
+    $('#empty').hidden = displayed.length > 0;
     const message = view === 'best' && !products.some(product => product.featured === true) ? 'shop.bestEmpty'
       : view === 'wishlist' && !favorites.size ? 'shop.wishlistEmpty' : 'shop.noMatches';
     $('#empty').innerHTML = `<p>${esc(t(message))}</p><button id="reset-filters" type="button">${esc(t('shop.showAll'))}</button>`;
@@ -141,30 +144,38 @@
     if (favorites.has(id)) favorites.delete(id); else favorites.add(id);
     persist(wishlistKey, [...favorites]); render();
     if ($('#product-dialog').open && currentProduct === id) renderProduct(id, $('#size')?.value);
+    else if(pageMode==='product'&&routeProduct===id)renderProduct(id,$('#size')?.value,true);
   }
   function detailGallery(product) {
     return `<div class="detail-gallery">${photo(product, true)}<div class="detail-photo-views" role="group" aria-label="${esc(t('product.photoViews'))}" hidden><button type="button" data-photo-view="product" aria-pressed="true">${esc(t('product.packshot'))}</button><button type="button" data-photo-view="model" aria-pressed="false">${esc(t('product.modelPhoto'))}</button></div></div>`;
   }
-  function renderProduct(id, selectedSize = '') {
+  function renderProduct(id, selectedSize = '', inline = false) {
     const product = products.find(item => item.id === id); if (!product) return;
     const description = label(product, 'description'), sizeGuide = label(product, 'sizeGuide');
     const originalNote = I.getLanguage() !== 'ko' && !product.translations?.[I.getLanguage()]?.description;
-    $('#product-detail').innerHTML = `<div class="detail-layout">${detailGallery(product)}<div class="detail-copy"><p class="muted">${esc(t('home.collection'))}</p><h2>${esc(label(product,'name'))}</h2><p>${esc(label(product,'color'))}<br>${money(product.price)}</p><p style="white-space:pre-line">${esc(description)}</p>${originalNote ? `<p class="muted">${esc(t('shop.originalText'))}</p>` : ''}<label for="size">${esc(t('product.size'))}</label><select id="size"><option value="">${esc(t('product.chooseSize'))}</option>${product.sizes.map(size => {
+    const target=inline ? $('#detail-page-content') : $('#product-detail');
+    target.innerHTML = `<div class="detail-layout">${detailGallery(product)}<div class="detail-copy"><p class="muted">${esc(t('home.collection'))}</p><h2>${esc(label(product,'name'))}</h2><p>${esc(label(product,'color'))}<br>${money(product.price)}</p><p style="white-space:pre-line">${esc(description)}</p>${originalNote ? `<p class="muted">${esc(t('shop.originalText'))}</p>` : ''}<label for="size">${esc(t('product.size'))}</label><select id="size"><option value="">${esc(t('product.chooseSize'))}</option>${product.sizes.map(size => {
       const limit = purchaseLimit(id, size);
       return `<option value="${esc(size)}" ${limit ? '' : 'disabled'} ${size === selectedSize ? 'selected' : ''}>${esc(size)} · ${esc(limit ? t('product.maxQuantity',{count:limit}) : t('product.soldOut'))}</option>`;
-    }).join('')}</select><button class="primary" id="add" type="button">${esc(t('product.addToBag'))}</button><p id="size-error" role="alert"></p><button class="size-guide-toggle" id="size-guide" type="button" aria-expanded="false" aria-controls="size-guide-content">${esc(t('product.sizeGuide'))} +</button><div id="size-guide-content" class="size-guide-content" hidden>${sizeGuide ? `<p style="white-space:pre-line">${esc(sizeGuide)}</p>${I.getLanguage() !== 'ko' && !product.translations?.[I.getLanguage()]?.sizeGuide ? `<p class="muted">${esc(t('shop.originalText'))}</p>` : ''}` : `<p>${esc(t('product.sizeGuideEmpty'))}</p><p>${esc(t('product.measureIntro'))}</p><ul><li>${esc(t('product.measureShoulder'))}</li><li>${esc(t('product.measureChest'))}</li><li>${esc(t('product.measureLength'))}</li></ul><p class="muted">${esc(t('product.measureNote'))}</p>`}</div><button class="save-product" type="button" data-wishlist="${esc(id)}" aria-pressed="${favorites.has(id)}">${esc(t(favorites.has(id) ? 'product.unsave' : 'product.save'))}</button><div class="sizes">${esc(t('product.paymentNote'))}</div></div></div>`;
-    bindModelPhotos($('#product-detail'));
+    }).join('')}</select><label for="product-quantity">${esc(t('cart.quantity'))}</label><input id="product-quantity" type="number" min="1" max="99" step="1" value="1"><button class="primary" id="add" type="button">${esc(t('product.addToBag'))}</button><p id="size-error" role="alert"></p><button class="size-guide-toggle" id="size-guide" type="button" aria-expanded="false" aria-controls="size-guide-content">${esc(t('product.sizeGuide'))} +</button><div id="size-guide-content" class="size-guide-content" hidden>${sizeGuide ? `<p style="white-space:pre-line">${esc(sizeGuide)}</p>${I.getLanguage() !== 'ko' && !product.translations?.[I.getLanguage()]?.sizeGuide ? `<p class="muted">${esc(t('shop.originalText'))}</p>` : ''}` : `<p>${esc(t('product.sizeGuideEmpty'))}</p><p>${esc(t('product.measureIntro'))}</p><ul><li>${esc(t('product.measureShoulder'))}</li><li>${esc(t('product.measureChest'))}</li><li>${esc(t('product.measureLength'))}</li></ul><p class="muted">${esc(t('product.measureNote'))}</p>`}</div><button class="save-product" type="button" data-wishlist="${esc(id)}" aria-pressed="${favorites.has(id)}">${esc(t(favorites.has(id) ? 'product.unsave' : 'product.save'))}</button><div class="sizes">${esc(t('product.paymentNote'))}</div></div></div>`;
+    bindModelPhotos(target);
     $('#size-guide').onclick = () => {
       const expanded = $('#size-guide').getAttribute('aria-expanded') !== 'true';
       $('#size-guide').setAttribute('aria-expanded', String(expanded)); $('#size-guide-content').hidden = !expanded;
     };
+    const purchasable=product.sizes.some(size=>purchaseLimit(id,size)>0);
+    $('#add').disabled=!purchasable;
+    if(!product.sizes.length) $('#size-error').textContent=t('product.variantsPending');
+    if(shopSettings.returnGuide||shopSettings.support)target.querySelector('.detail-copy').insertAdjacentHTML('beforeend',`<p class="configured-shipping">${esc(shopSettings.returnGuide||shopSettings.support)}</p>`);
     $('#add').onclick = () => {
       const size = $('#size').value;
       if (!size) { $('#size-error').textContent = t('product.selectSizeFirst'); $('#size').focus(); return; }
       const limit = purchaseLimit(id, size), row = cart.find(item => item.id === id && item.size === size);
       if (!limit) { $('#size-error').textContent = t('product.unavailable'); return; }
-      if ((row?.qty || 0) + 1 > limit) { $('#size-error').textContent = t('product.quantityLimit'); return; }
-      if (row) row.qty++; else cart.push({id,size,qty:1});
+      const qty=Number($('#product-quantity').value);
+      if (!Number.isInteger(qty)||qty<1) {$('#size-error').textContent=t('product.quantityLimit');return;}
+      if ((row?.qty || 0) + qty > limit) { $('#size-error').textContent = t('product.quantityLimit'); return; }
+      if (row) row.qty+=qty; else cart.push({id,size,qty});
       saveCart(); $('#product-dialog').close(); $('#bag-dialog').showModal();
     };
   }
@@ -222,6 +233,7 @@
     }
   }
   function changeView(next) {
+    if(pageMode!=='shop'){location.href='/shop?view='+encodeURIComponent(next);return;}
     view = next; category = 'ALL'; search = ''; sort = 'default';
     $('#search').value = ''; $('#sort').value = 'default'; render(); closeMenu(false);
     $('#shop').focus({preventScroll:true}); $('#shop').scrollIntoView();
@@ -317,7 +329,7 @@
   }
   function canRotateHero() {
     return heroInitialized && content?.heroImages.length > 1 && !heroPaused && !heroHovered && !heroFocused
-      && !document.hidden && campaignVisible && !reducedMotion.matches;
+      && pageMode==='home' && !document.hidden && campaignVisible && !reducedMotion.matches;
   }
   function syncHeroTimer() {
     clearInterval(heroTimer); heroTimer = null;
@@ -361,7 +373,7 @@
   }
   function heroSource(index) { return imageUrl((mobile.matches && content.homepage?.banners[index]?.mobileImage) || content.heroImages[index]); }
   function updateHeroLink() {
-    $('#hero-link').href = content.homepage?.banners[currentSlide]?.href || '#shop';
+    $('#hero-link').href = '/shop';
   }
   function renderHomepageMedia() {
     updateHeroLink();
@@ -372,8 +384,8 @@
       section.querySelector('img').src = imageUrl(campaignSettings.image);
       section.querySelector('source').srcset = imageUrl(campaignSettings.mobileImage || campaignSettings.image);
     }
-    const journals = content.homepage?.journals || ['OUTER','TOPS','BOTTOMS'].map(category=>({category,image:null}));
-    $('#journal-categories').innerHTML = journals.map(entry=>`<a href="/?category=${entry.category}#shop" data-journal-category="${entry.category}">${entry.image ? `<picture><source media="(max-width:800px)" srcset="${esc(imageUrl(entry.mobileImage || entry.image))}"><img src="${esc(imageUrl(entry.image))}" alt="${entry.category}" loading="lazy"></picture>` : ''}<span>${{OUTER:'OUTER',TOPS:'T-SHIRT',BOTTOMS:'PANTS',ACC:'ACC'}[entry.category]}</span></a>`).join('');
+    const journals = content.homepage?.journals || ['OUTER','TSHIRT','BOTTOMS'].map(category=>({category,image:null}));
+    $('#journal-categories').innerHTML = journals.map(entry=>`<a href="/shop?category=${entry.category}">${entry.image ? `<picture><source media="(max-width:800px)" srcset="${esc(imageUrl(entry.mobileImage || entry.image))}"><img src="${esc(imageUrl(entry.image))}" alt="${entry.category}" loading="lazy"></picture>` : ''}<span>${['OUTER','T-SHIRT','PANTS'][journals.indexOf(entry)]}</span></a>`).join('');
   }
   function renderSlides() {
     if (!content?.heroImages.length) return;
@@ -399,21 +411,24 @@
         ]);
       }
       const requestedCategory = new URLSearchParams(location.search).get('category');
-      if (['OUTER','TOPS','BOTTOMS','ACC'].includes(requestedCategory)) category=requestedCategory;
+      if (categories.includes(requestedCategory)) category=requestedCategory;
+      const requestedView=new URLSearchParams(location.search).get('view');if(['best','wishlist'].includes(requestedView))view=requestedView;
+      if(new URLSearchParams(location.search).has('search'))$('#search-area').hidden=false;
+      const requestedSearch=new URLSearchParams(location.search).get('q');if(requestedSearch){search=requestedSearch.trim().normalize('NFKC').toLowerCase();$('#search').value=requestedSearch;$('#search-area').hidden=false;}
       products = content.products.filter(product => product.visible !== false);
       const savedCart = stored(cartKey), savedFavorites = stored(wishlistKey);
       cart = Array.isArray(savedCart) ? savedCart.filter(item => item && products.some(product => product.id === item.id && product.sizes.includes(item.size)) && Number.isInteger(item.qty) && item.qty > 0 && item.qty <= 99) : [];
       favorites = new Set(Array.isArray(savedFavorites) ? savedFavorites.filter(id => products.some(product => product.id === id)) : []);
       cancelHeroTransition(); currentSlide = 0; heroInitialized = false; failedHeroSources.clear();
       persist(wishlistKey,[...favorites]); applyBrand(); renderSlides(); syncHeroTimer(); render(); renderCart(); renderCommunity();
-      const linkedProduct=new URLSearchParams(location.search).get('product'); if(linkedProduct&&products.some(p=>p.id===linkedProduct))openProduct(linkedProduct);
+      if(pageMode==='product'){const product=products.find(p=>p.id===routeProduct);$('#detail-page-content').hidden=false;if(product){currentProduct=product.id;renderProduct(product.id,'',true);document.title=product.name+' — '+content.brand;}else $('#detail-page-content').textContent='상품을 찾을 수 없습니다.';}
+      const linkedProduct=new URLSearchParams(location.search).get('product');if(linkedProduct&&products.some(p=>p.id===linkedProduct))location.replace('/products/'+encodeURIComponent(linkedProduct));
     } catch { $('#products').innerHTML = `<p class="muted">${esc(t('product.loadingError'))}</p><button id="retry-products" type="button">${esc(t('common.retry'))}</button>`; }
   }
 
   document.addEventListener('click', event => {
     const service = event.target.closest('[data-preview-service]');
     if (service && preview) { event.preventDefault(); showInfo('preview'); return; }
-    const journal = event.target.closest('[data-journal-category]'); if (journal) { event.preventDefault(); category = journal.dataset.journalCategory; view='all'; search=''; $('#search').value=''; render(); history.replaceState(null,'',journal.getAttribute('href')); $('#shop').scrollIntoView(); return; }
     const favorite = event.target.closest('[data-wishlist]'); if (favorite) { toggleFavorite(favorite.dataset.wishlist); return; }
     const photoView = event.target.closest('[data-photo-view]');
     if (photoView) {
@@ -452,7 +467,7 @@
   $('#sort').onchange = event => { sort = event.target.value; render(); };
   $('#search').oninput = event => { search = event.target.value.trim().normalize('NFKC').toLowerCase(); render(); };
   $('#clear-search').onclick = () => { $('#search').value = ''; search = ''; render(); $('#search').focus(); };
-  $('#search-button').onclick = () => { closeMenu(false); $('#search-area').hidden = false; $('#shop').scrollIntoView(); $('#search').focus({preventScroll:true}); };
+  $('#search-button').onclick = () => { if(pageMode!=='shop'){location.href='/shop?search=1';return;}closeMenu(false); $('#search-area').hidden = false; $('#shop').scrollIntoView(); $('#search').focus({preventScroll:true}); };
   $('#wishlist-button').onclick = () => changeView('wishlist');
   $('#bag-button').onclick = () => { closeMenu(false); $('#bag-dialog').showModal(); };
   $('#mobile-bag-button')?.addEventListener('click', () => $('#bag-dialog').showModal());
@@ -460,6 +475,10 @@
 
   $('#language-button').onclick = () => { closeMenu(false); $('#language-dialog').showModal(); };
   $('#hero-toggle').onclick = () => { heroPaused = !heroPaused; updateHeroControls(); syncHeroTimer(); };
+  let heroTouch=null,heroSwiped=false;
+  campaign.addEventListener('touchstart',event=>{heroTouch=event.touches[0] ? {x:event.touches[0].clientX,y:event.touches[0].clientY}:null;heroPaused=true;updateHeroControls();syncHeroTimer();},{passive:true});
+  campaign.addEventListener('touchend',event=>{if(!heroTouch||!content)return;const touch=event.changedTouches[0],dx=touch.clientX-heroTouch.x,dy=touch.clientY-heroTouch.y;if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)){heroSwiped=true;changeHeroSlide((currentSlide+(dx<0?1:-1)+content.heroImages.length)%content.heroImages.length);setTimeout(()=>heroSwiped=false,500);}heroTouch=null;},{passive:true});
+  $('#hero-link').addEventListener('click',event=>{if(heroSwiped)event.preventDefault();});
   campaign.addEventListener('mouseenter', () => { if (finePointer.matches) { heroHovered = true; syncHeroTimer(); } });
   campaign.addEventListener('mouseleave', () => { heroHovered = false; syncHeroTimer(); });
   campaign.addEventListener('focusin', event => { heroFocused = event.target.matches(':focus-visible'); syncHeroTimer(); });
@@ -509,6 +528,7 @@
   window.addEventListener('street-label:languagechange', () => {
     I.apply(); if (!content) return; const selectedSize = $('#size')?.value;
     applyBrand(); renderSlides(); render(); renderCart(); renderCommunity();
+    if(pageMode==='product')renderProduct(routeProduct,selectedSize,true);
     if ($('#product-dialog').open && currentProduct) renderProduct(currentProduct,selectedSize);
     if ($('#info-dialog').open && currentInfo) showInfo(currentInfo);
   });

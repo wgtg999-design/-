@@ -1,0 +1,65 @@
+[
+  {
+    "id": "destroyed-knit-sweater-black",
+    "filename": "Destroyed Knit Sweater — Black.png",
+    "asset": "/assets/clothes-destroyed-knit-sweater-black.png",
+    "sha256": "7a410c24f515c0f19ed561269022d53d56284d06ff28d5e3a11ad09db036317c",
+    "bytes": 2386537
+  },
+  {
+    "id": "distressed-off-shoulder-knit-olive-grey",
+    "filename": "Distressed Off-Shoulder Knit — Olive Grey.png",
+    "asset": "/assets/clothes-distressed-off-shoulder-knit-olive-grey.png",
+    "sha256": "8a6c9babf7e358394e9ae612fcb1bb4ab7d6460c9ef16c4ca24c5046bc999bc9",
+    "bytes": 2846628
+  },
+  {
+    "id": "heavyweight-oversized-zip-hoodie-black",
+    "filename": "Heavyweight Oversized Zip Hoodie — Black.png",
+    "asset": "/assets/clothes-heavyweight-oversized-zip-hoodie-black.png",
+    "sha256": "658cc7348a12714e72257018184d244b1d23e2814d97f2a979666df3d593dced",
+    "bytes": 1738861
+  },
+  {
+    "id": "slim-cropped-zip-hoodie-heather-grey",
+    "filename": "Slim Cropped Zip Hoodie — Heather Grey.png",
+    "asset": "/assets/clothes-slim-cropped-zip-hoodie-heather-grey.png",
+    "sha256": "3b3dd5dda1ceea87daf90ef701024eb9e05606da31ecdc5fb6a648201d71346a",
+    "bytes": 1949562
+  },
+  {
+    "id": "star-stitch-ribbed-tank-top-black",
+    "filename": "Star Stitch Ribbed Tank Top — Black.png",
+    "asset": "/assets/clothes-star-stitch-ribbed-tank-top-black.png",
+    "sha256": "46f94841cc52011987264b93baf8c7c92b9cb2c73e7e9e0b1b095c8864044f21",
+    "bytes": 1552867
+  },
+  {
+    "id": "ice-washed-graphic-layered-tee-blue",
+    "filename": "Ice Washed Graphic Layered Tee — Blue.png",
+    "asset": "/assets/clothes-ice-washed-graphic-layered-tee-blue.png",
+    "sha256": "b4fbab20c15dc4f8d8236603ef5b7d2593c16070c55e1153f4b5a0ae421e2dc5",
+    "bytes": 2110398
+  },
+  {
+    "id": "vintage-washed-gothic-crop-long-sleeve-charcoal",
+    "filename": "Vintage Washed Gothic Crop Long Sleeve — Charcoal.png",
+    "asset": "/assets/clothes-vintage-washed-gothic-crop-long-sleeve-charcoal.png",
+    "sha256": "46968e106fee301287ba25bfb817f459a45f94e36c5dfe335d177a6a17e68132",
+    "bytes": 1992320
+  },
+  {
+    "id": "thorn-graphic-layered-tee-burgundy",
+    "filename": "Thorn Graphic Layered Tee — Burgundy.png",
+    "asset": "/assets/clothes-thorn-graphic-layered-tee-burgundy.png",
+    "sha256": "f18afad65eb6b6831c3a16886bef3028bf83b50c588093c3919e2770289cc089",
+    "bytes": 2004257
+  },
+  {
+    "id": "vintage-washed-utility-jacket-brown",
+    "filename": "Vintage Washed Utility Jacket — Brown.png",
+    "asset": "/assets/clothes-vintage-washed-utility-jacket-brown.png",
+    "sha256": "32e3102ee7595cbda2d0e14406bfe1509127df1fca20a6d0a07463d38a2ec969",
+    "bytes": 2310851
+  }
+]
