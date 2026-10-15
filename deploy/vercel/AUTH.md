@@ -47,3 +47,5 @@ Clerk에서 이메일 인증과 로그인을 마쳤지만 쇼핑몰 DB의 계정
 ## 검증 범위
 
 `node deploy/vercel/tests/auth.cjs`는 Clerk SDK를 모의 처리하고 분리된 SQLite를 사용합니다. 가짜 Sites 헤더 거부, 기본 이메일 인증 확인, 계정/회원 ID 연결, 기존 관리자 ID 유지, 안전한 이동 경로, 출처 제한과 로그아웃 보호를 확인합니다. 실제 Clerk 운영 계정 로그인·이메일 발송·재설정·생산 세션 동작은 외부 계정 연결 후 별도로 확인해야 합니다.
+
+2026-10-15 연결 진단: 실제 사이트의 공개키·비밀키는 같은 Development 환경 `ins_3KgaqVDPFOgs39aC55eMwtPqczO`를 가리킵니다. 당시 대시보드에서 수정 중이던 `ins_3Kgb2nLmM53vIkScDeOd6JJgnfM`와 달랐습니다. `/help/owner`의 설정 링크는 확인한 Development 환경으로 연결합니다. 환경 ID는 공개 식별자이며 인증키가 아닙니다. 향후 키를 다른 환경으로 교체하면 진단을 다시 확인해야 합니다.
