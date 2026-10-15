@@ -47,3 +47,13 @@ Administrator brand and product language selectors now default to Korean (`ko`),
 - Production build and local production HTTP checks.
 
 Browser/SQL fixture results are not proof of real provider login, real R2 writes, or production catalogue import. No local deployment/DB service credentials or representative owner session were available for the live import. Final reporting must state the actual production record count and distinguish this pending action from committed assets/code.
+
+## Banner exchange, seasonal journal captions and contrast
+
+The requested first hero/campaign exchange is applied by shared `StoreCampaign.layout` only to the known previous pairing (first banner `campaign-wide.png`, campaign default `editorial-brutalist-monochrome.png`). It exchanges the first banner and campaign while keeping the other banner. Desktop/mobile sources move together. `homepage.mediaLayout: swapped-v1` makes the transformation idempotent; saving in the authenticated editor persists the effective layout. Other custom pairings are preserved. This does not write to production during page reads.
+
+Journal category labels are overlaid at bottom right: bold category title above a thin `WINTER BEST` seasonal line. `homepage.journalSeason` is editable (up to 40 characters); each journal entry can override `title` (30 characters) and `textTone` (`auto`, `light`, `dark`). `homepage.heroTextTone` offers the same automatic/manual choice. Existing content remains valid without the new optional fields.
+
+Automatic contrast samples the displayed image region in a small canvas and chooses black/white by relative luminance. It updates on hero image changes, journal image load and responsive resize. Tainted cross-origin images use CSS difference blending; administrators can force white or black. No CORS or authentication protection is weakened.
+
+The first two original sprite packshots include a narrow sliver of the pants below. A 4% bottom mask removes this bleed without changing the source image or deleting pants products; the model layer remains above the mask. Separate uploaded product photos and bottom-row sprites are unaffected.

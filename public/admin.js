@@ -29,7 +29,7 @@ async function load(){
   busyState(true);
   try{
     const data=await api('/api/admin/content');
-    content=data.content;revision=data.revision;dirty=false;
+    content=window.StoreCampaign.layout(data.content);revision=data.revision;dirty=false;
     render();$('#editor').hidden=false;
     status('대표님 전용 관리자입니다. 저장 전 변경은 홈페이지에 반영되지 않습니다.');
     $('#save-state').textContent=data.updatedAt?'마지막 저장 '+new Date(data.updatedAt).toLocaleString('ko-KR'):'첫 편집을 시작하세요';

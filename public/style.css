@@ -305,3 +305,18 @@ body.menu-is-open{overflow:hidden}
 @media(max-width:800px){.store-page .shop-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.catalog-page .store-main{padding-top:60px}.shop-grid .quick-panel{padding:12px}.quick-panel h3{font-size:10px}}
 
 .packshot.custom-photo{background-size:contain;background-color:#fff}
+/* Keep category typography on the photograph, with a seasonal secondary line. */
+#journal-categories a{isolation:isolate}
+#journal-categories picture{display:block;aspect-ratio:4/5;overflow:hidden}
+#journal-categories picture img{width:100%;height:100%;object-fit:cover}
+#journal-categories .journal-copy{position:absolute;right:clamp(12px,2vw,32px);bottom:clamp(16px,2vw,32px);padding:0;text-align:right;color:var(--journal-ink,#111);text-shadow:0 1px 4px var(--adaptive-shadow,#fff8);transition:color .2s;pointer-events:none}
+.journal-copy strong{display:block;font-size:clamp(16px,2.2vw,34px);font-weight:750;line-height:1.1;letter-spacing:-.02em}
+.journal-copy small{display:block;margin-top:8px;font-size:clamp(9px,.9vw,13px);font-weight:300;letter-spacing:.08em;line-height:1.4}
+#journal-categories .contrast-fallback .journal-copy{color:white;mix-blend-mode:difference;text-shadow:none}
+.hero .notice,.hero .campaign-caption,.hero-controls{color:var(--hero-ink,#fff);text-shadow:0 1px 4px var(--adaptive-shadow,#0008);transition:color .2s}
+.hero-pagination button:after{background:currentColor;opacity:.45}.hero-pagination button.selected:after{background:currentColor;opacity:1}
+@media(min-width:801px){.site-sidebar.hero-overlay{color:var(--hero-ink,#fff);mix-blend-mode:normal;text-shadow:0 1px 4px var(--adaptive-shadow,#0008)}.site-sidebar.hero-overlay.contrast-fallback{color:white;mix-blend-mode:difference}}
+.hero.contrast-fallback .notice,.hero.contrast-fallback .campaign-caption,.hero.contrast-fallback .hero-controls{color:white;mix-blend-mode:difference;text-shadow:none}
+/* The original top-row sprite includes a narrow sliver of the pants row. */
+.product-photo.packshot:not(.bottom):not(.custom-photo)::after{content:'';position:absolute;left:0;right:0;bottom:0;height:4%;background:#e4e3e1;pointer-events:none;z-index:0}
+@media(max-width:800px){.journal-copy strong{font-size:clamp(13px,3.6vw,22px)}.journal-copy small{font-size:8px;margin-top:5px;letter-spacing:.03em}}

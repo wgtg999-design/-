@@ -10,11 +10,13 @@ function socialLink(hosts:string[]){return z.string().trim().max(500).refine(val
 const socialLinks=z.object({instagram:socialLink(['instagram.com','www.instagram.com']),kakao:socialLink(['pf.kakao.com','open.kakao.com','kakao.com','www.kakao.com'])}).strict();
 const categoryKey=z.enum(['OUTER','BOTTOMS','TOPS','ACC','KNITWEAR','HOODIES','TSHIRT']);
 const destination=z.string().max(300).refine(x=>x===''||/^\/(?!\/)[a-zA-Z0-9/_?=&%#.-]*$/.test(x)||/^#[a-zA-Z0-9_-]+$/.test(x),'사이트 내부 주소만 입력하세요.');
+const tone=z.enum(['auto','light','dark']);
 const homepage=z.object({
+ mediaLayout:z.literal('swapped-v1').optional(),heroTextTone:tone.optional(),journalSeason:z.string().trim().max(40).optional(),
  banners:z.array(z.object({mobileImage:localImage.nullable().optional(),href:destination}).strict()).max(5),
  slider01:z.array(z.string().max(60)).max(10),slider02:z.array(z.string().max(60)).max(10).optional(),
  campaign:z.object({image:localImage.nullable(),mobileImage:localImage.nullable(),enabled:z.boolean().optional()}).strict(),
- journals:z.array(z.object({image:localImage.nullable(),mobileImage:localImage.nullable().optional(),category:categoryKey}).strict()).length(3)
+ journals:z.array(z.object({image:localImage.nullable(),mobileImage:localImage.nullable().optional(),category:categoryKey,title:z.string().trim().max(30).optional(),textTone:tone.optional()}).strict()).length(3)
 }).strict();
 export const contentSchema=z.object({
  brand:z.string().trim().min(1).max(35),notice:z.string().max(120),aboutTitle:z.string().max(100),aboutText:z.string().max(500),

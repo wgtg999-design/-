@@ -19,5 +19,12 @@
     const enabled=saved?.enabled!==false;
     return {image:saved?.image||(enabled?source:null),mobileImage:saved?.mobileImage??null,enabled};
   }
-  window.StoreCampaign=Object.freeze({source,settings:campaign});
+  function layout(content) {
+    if(content.homepage?.mediaLayout==='swapped-v1'||content.heroImages[0]!=='/assets/campaign-wide.png'||campaign(content.homepage?.campaign).image!==source)return content;
+    const home=content.homepage||{banners:content.heroImages.map(()=>({href:'/shop',mobileImage:null})),slider01:content.products.filter(p=>p.visible).slice(0,10).map(p=>p.id),journals:entries()};
+    const previous=campaign(home.campaign),banners=home.banners.map(item=>({...item}));
+    const first=banners[0];if(first)first.mobileImage=previous.mobileImage;
+    return {...content,heroImages:[source,...content.heroImages.slice(1)],homepage:{...home,mediaLayout:'swapped-v1',banners,campaign:{...previous,image:content.heroImages[0],mobileImage:home.banners[0]?.mobileImage||null}}};
+  }
+  window.StoreCampaign=Object.freeze({source,settings:campaign,layout});
 })();
