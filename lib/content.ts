@@ -27,27 +27,28 @@ export const contentSchema=z.object({
 export type Content=z.infer<typeof contentSchema>;
 // Numbered original photographs supplied by the operator. The ID and original
 // sample packshot must both match; sorting never changes the photo assignment.
-const bundledModelPhotos:Record<string,{crop:string;image:string;focus:'upper'|'lower';source?:string;kind?:'generated'}>={
+const bundledModelPhotos:Record<string,{crop:string;image:string;focus:'upper'|'lower';source?:string;kind?:'generated';previous?:string}>={
  jacket:{crop:'',image:'/assets/jacket-model-01.png',focus:'upper'},
  shell:{crop:'right',image:'/assets/shell-model-01.png',focus:'upper'},
  denim:{crop:'bottom',image:'/assets/denim-model-01.png',focus:'lower'},
  trousers:{crop:'bottom right',image:'/assets/trousers-model-01.png',focus:'lower'},
  'destroyed-knit-sweater-black':{crop:'',source:'/assets/clothes-destroyed-knit-sweater-black.png',image:'/assets/model-destroyed-knit-black.png',focus:'upper',kind:'generated'},
- 'distressed-off-shoulder-knit-olive-grey':{crop:'',source:'/assets/clothes-distressed-off-shoulder-knit-olive-grey.png',image:'/assets/model-off-shoulder-knit-olive.png',focus:'upper',kind:'generated'},
+ 'distressed-off-shoulder-knit-olive-grey':{crop:'',source:'/assets/clothes-distressed-off-shoulder-knit-olive-grey.png',image:'/assets/woman-v2-off-shoulder-knit-olive.png',previous:'/assets/model-off-shoulder-knit-olive.png',focus:'upper',kind:'generated'},
  'heavyweight-oversized-zip-hoodie-black':{crop:'',source:'/assets/clothes-heavyweight-oversized-zip-hoodie-black.png',image:'/assets/model-oversized-hoodie-black.png',focus:'upper',kind:'generated'},
- 'slim-cropped-zip-hoodie-heather-grey':{crop:'',source:'/assets/clothes-slim-cropped-zip-hoodie-heather-grey.png',image:'/assets/model-cropped-hoodie-grey.png',focus:'upper',kind:'generated'},
- 'star-stitch-ribbed-tank-top-black':{crop:'',source:'/assets/clothes-star-stitch-ribbed-tank-top-black.png',image:'/assets/model-star-tank-black.png',focus:'upper',kind:'generated'},
+ 'slim-cropped-zip-hoodie-heather-grey':{crop:'',source:'/assets/clothes-slim-cropped-zip-hoodie-heather-grey.png',image:'/assets/woman-v2-cropped-hoodie-grey.png',previous:'/assets/model-cropped-hoodie-grey.png',focus:'upper',kind:'generated'},
+ 'star-stitch-ribbed-tank-top-black':{crop:'',source:'/assets/clothes-star-stitch-ribbed-tank-top-black.png',image:'/assets/woman-v2-star-tank-black.png',previous:'/assets/model-star-tank-black.png',focus:'upper',kind:'generated'},
  'ice-washed-graphic-layered-tee-blue':{crop:'',source:'/assets/clothes-ice-washed-graphic-layered-tee-blue.png',image:'/assets/journal-layered-tee-model.png',focus:'upper',kind:'generated'},
- 'vintage-washed-gothic-crop-long-sleeve-charcoal':{crop:'',source:'/assets/clothes-vintage-washed-gothic-crop-long-sleeve-charcoal.png',image:'/assets/model-gothic-crop-charcoal.png',focus:'upper',kind:'generated'},
+ 'vintage-washed-gothic-crop-long-sleeve-charcoal':{crop:'',source:'/assets/clothes-vintage-washed-gothic-crop-long-sleeve-charcoal.png',image:'/assets/woman-v2-gothic-crop-charcoal.png',previous:'/assets/model-gothic-crop-charcoal.png',focus:'upper',kind:'generated'},
  'thorn-graphic-layered-tee-burgundy':{crop:'',source:'/assets/clothes-thorn-graphic-layered-tee-burgundy.png',image:'/assets/model-thorn-layered-burgundy.png',focus:'upper',kind:'generated'},
  'vintage-washed-utility-jacket-brown':{crop:'',source:'/assets/clothes-vintage-washed-utility-jacket-brown.png',image:'/assets/model-utility-jacket-brown.png',focus:'upper',kind:'generated'},
 };
 export function withBundledModelPhotos(content:Content):Content{
  return {...content,products:content.products.map(product=>{
   const preset=Object.hasOwn(bundledModelPhotos,product.id)?bundledModelPhotos[product.id]:undefined;
-  // undefined inherits a supplied photo, null records an administrator's
-  // explicit removal, and a saved URL always takes precedence. No DB writes.
-  if(!preset||product.modelImage!==undefined||product.image!==(preset.source||'/assets/products.png')||product.crop!==preset.crop)return product;
+  // Only a matching bundled predecessor receives this requested model update.
+  // Custom uploads and explicit removals remain authoritative. No DB writes.
+  if(!preset||product.image!==(preset.source||'/assets/products.png')||product.crop!==preset.crop)return product;
+  if(product.modelImage!==undefined&&(!preset.previous||product.modelImage!==preset.previous))return product;
   return {...product,modelImage:preset.image,modelFocus:product.modelFocus??preset.focus,...(preset.kind?{modelImageKind:preset.kind}:{})};
  })};
 }

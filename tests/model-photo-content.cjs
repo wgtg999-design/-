@@ -61,16 +61,18 @@ const { mergeSuppliedProducts } = load('lib/catalog-import.ts');
 const { mergeBottomsProducts } = load('lib/bottoms-import.ts');
 const generatedModels = {
   'destroyed-knit-sweater-black':'/assets/model-destroyed-knit-black.png',
-  'distressed-off-shoulder-knit-olive-grey':'/assets/model-off-shoulder-knit-olive.png',
+  'distressed-off-shoulder-knit-olive-grey':'/assets/woman-v2-off-shoulder-knit-olive.png',
   'heavyweight-oversized-zip-hoodie-black':'/assets/model-oversized-hoodie-black.png',
-  'slim-cropped-zip-hoodie-heather-grey':'/assets/model-cropped-hoodie-grey.png',
-  'star-stitch-ribbed-tank-top-black':'/assets/model-star-tank-black.png',
+  'slim-cropped-zip-hoodie-heather-grey':'/assets/woman-v2-cropped-hoodie-grey.png',
+  'star-stitch-ribbed-tank-top-black':'/assets/woman-v2-star-tank-black.png',
   'ice-washed-graphic-layered-tee-blue':'/assets/journal-layered-tee-model.png',
-  'vintage-washed-gothic-crop-long-sleeve-charcoal':'/assets/model-gothic-crop-charcoal.png',
+  'vintage-washed-gothic-crop-long-sleeve-charcoal':'/assets/woman-v2-gothic-crop-charcoal.png',
   'thorn-graphic-layered-tee-burgundy':'/assets/model-thorn-layered-burgundy.png',
   'vintage-washed-utility-jacket-brown':'/assets/model-utility-jacket-brown.png',
 };
 const catalogueFixture = () => mergeBottomsProducts(mergeSuppliedProducts(structuredClone(defaults)).content).content;
+const femalePredecessors={"/assets/woman-v2-off-shoulder-knit-olive.png": "/assets/model-off-shoulder-knit-olive.png", "/assets/woman-v2-cropped-hoodie-grey.png": "/assets/model-cropped-hoodie-grey.png", "/assets/woman-v2-star-tank-black.png": "/assets/model-star-tank-black.png", "/assets/woman-v2-gothic-crop-charcoal.png": "/assets/model-gothic-crop-charcoal.png"};
+
 const contentRoute = load('app/api/admin/content/route.ts');
 const uploadRoute = load('app/api/admin/upload/route.ts');
 const publicRoute = load('app/api/content/route.ts');
@@ -89,6 +91,22 @@ async function check(label, work) { await work(); results.push(label); console.l
 function stored() { return JSON.parse(row.data); }
 
 (async () => {
+  await check('female model updates apply only to exact bundled predecessors; custom uploads and explicit removals are preserved',async()=>{
+    const source=catalogueFixture();
+    for(const [id,image] of Object.entries(generatedModels)){
+      const previous=femalePredecessors[image];if(!previous)continue;
+      const original=source.products.find(product=>product.id===id);
+      for(const kind of ['generated','photo']){
+        const product={...original,modelImage:previous,modelImageKind:kind};
+        const result=withBundledModelPhotos({...source,products:[product]});
+        assert.equal(result.products[0].modelImage,image);assert.equal(result.products[0].modelImageKind,'generated');
+        assert.equal(product.modelImage,previous);assert.deepEqual(withBundledModelPhotos(result),result);
+      }
+      for(const modelImage of [null,'/media/12345678-1234-1234-1234-123456789012.webp']){
+        const product={...original,modelImage};assert.deepEqual(withBundledModelPhotos({...source,products:[product]}).products[0],product);
+      }
+    }
+  });
   await check('all 19 public products receive their exact matching model images; supplied photos remain distinct from nine generated previews', async () => {
     const source=catalogueFixture(),before=JSON.stringify(source),result=withBundledModelPhotos(source),visible=result.products.filter(product=>product.visible);
     assert.equal(visible.length,19);assert(visible.every(product=>product.modelImage));assert.equal(visible.filter(product=>product.modelImageKind==='generated').length,9);

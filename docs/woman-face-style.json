@@ -1,0 +1,48 @@
+{
+  "date": "2026-10-16",
+  "kind": "AI wearing illustration edited with image_gen",
+  "identityReference": {
+    "origin": "Faithful portrait derived from the user-provided inline face reference, kept outside the public web root",
+    "sha256": "21aa102ca22bc28407b0e588f713584ad4de9305daf1a94b14c94ebe2298fb95"
+  },
+  "direction": {
+    "expression": "relaxed neutral editorial expressions; softer eyes and level chin",
+    "proportion": "slightly smaller head in relation to body; requested approximate 12 percent is art direction, not a measured anatomical claim",
+    "body": "slender build, narrow gently sloping shoulders, naturally full bust under original clothing",
+    "preserved": "garment design, color, graphic, background and product identity"
+  },
+  "assets": [
+    {
+      "source": "/assets/model-off-shoulder-knit-olive.png",
+      "asset": "/assets/woman-v2-off-shoulder-knit-olive.png",
+      "sourceSha256": "6c1f7ff64204e0b0181c5c6e0624a3a709fdcf215d07cc506b2920ab0647da08",
+      "sha256": "80f1768cb15221a5074d4246556c5817f7b7a1b1fe85639f3403ee9963bbc6d5",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "source": "/assets/model-cropped-hoodie-grey.png",
+      "asset": "/assets/woman-v2-cropped-hoodie-grey.png",
+      "sourceSha256": "8a9cd281957c1069e474e34e64652e55838a00b041f2eb5cf3fda4741faa0368",
+      "sha256": "c15c69de6049a2864cb9ff3d3ff1e5890f0c89a5d65583f688d0994af5ec0c61",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "source": "/assets/model-star-tank-black.png",
+      "asset": "/assets/woman-v2-star-tank-black.png",
+      "sourceSha256": "0cdf3a9dfe0b6cf29e6994810fd3fff2d44e70bfcfdcff39855a58a4ddba515c",
+      "sha256": "23c1f7d553cc375920b2399a02b5d37e9394b3d2968511912ceddb3c36046803",
+      "width": 1122,
+      "height": 1402
+    },
+    {
+      "source": "/assets/model-gothic-crop-charcoal.png",
+      "asset": "/assets/woman-v2-gothic-crop-charcoal.png",
+      "sourceSha256": "74926224d009fdd3dd68bd4aaeab9d6ee2c6533c2ac824130373f4d9b4fcd308",
+      "sha256": "f2c4fab855c0f2bd45854d592ad4ecdbeb606078e373e2dcdf8984250f61f71f",
+      "width": 1122,
+      "height": 1402
+    }
+  ]
+}

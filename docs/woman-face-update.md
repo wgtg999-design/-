@@ -1,0 +1,11 @@
+# Women's wearing-photo update
+
+The owner supplied a face reference, requested a slender adult model with narrow gently sloping shoulders and a fuller bust under the existing clothes, then asked for calmer neutral/editorial expressions and a slightly smaller head in relation to the body. Four upper-body wearing illustrations with a complete visible face were edited using image_gen. Cropped lower-body photographs without a complete face and male model photographs retain their existing composition.
+
+Only four corresponding model images change: distressed-off-shoulder-knit-olive-grey, slim-cropped-zip-hoodie-heather-grey, star-stitch-ribbed-tank-top-black, vintage-washed-gothic-crop-long-sleeve-charcoal. Packshot originals, product details, pricing and variants are unchanged. The image provenance and hashes are recorded in woman-face-style.json. The face reference is retained outside the public web root; final wearing illustrations remain explicitly labelled AI previews.
+
+The shared read helper supports a narrow predecessor upgrade: only the exact original bundled wearing asset on its matching product ID, original packshot and crop can receive the requested face update. Custom upload paths, explicit null removal, changed garments and changed crops remain authoritative. Derived reads do not write the database. Saving through the existing owner-only editor persists content with the existing revision and origin checks.
+
+The previous live code is saved at origin/backup/before-female-face-20261016 (166444d). Earlier source assets are retained for rollback. New illustrations are delivered as content-hashed responsive WebP variants. Draft images that preceded the owner's latest expression/proportion feedback were moved out of the public asset directory.
+
+Validation: expanded model-photo content suite covers the four known predecessors, idempotence, no mutation, custom/null preservation, all nineteen public product pairs, editor replacement/removal and save/reload. The existing full Chromium desktop/mobile storefront regression and Next production build are used to verify integration. Visual identity/expression/proportions are reviewed manually rather than asserted as exact measurable anatomy or actual physical garment fit.
