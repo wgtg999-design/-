@@ -10,7 +10,7 @@ const folder=path.join(root,'public/assets'),files=(await fs.readdir(folder)).fi
 let originalBytes=0,deliveryBytes=0;
 for(const file of files){
  const original=await fs.readFile(path.join(folder,file)),hash=createHash('sha256').update(original).digest('hex').slice(0,12),meta=await sharp(original).metadata(),items=[];originalBytes+=original.length;
- for(const target of [480,960,1600]){
+ for(const target of [480,960,1600,meta.width]){
   const width=Math.min(target,meta.width);if(items.some(item=>item.width===width))continue;
   const name=file.slice(0,-4)+'-'+hash+'-'+width+'.webp',output=path.join(folder,name);
   try{await fs.access(output)}catch{await sharp(original).resize({width,withoutEnlargement:true}).webp({quality:88,effort:5}).toFile(output)}

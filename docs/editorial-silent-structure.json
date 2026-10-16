@@ -1,0 +1,28 @@
+{
+  "asset": "/assets/editorial-silent-structure.png",
+  "title": "Silent Structure",
+  "createdAt": "2026-10-16",
+  "kind": "generated-brand-editorial",
+  "generator": "image_gen.imagegen",
+  "originalFile": "/workspace/generated_images/exec-76f8ac5a-9f76-4871-a925-a9bd1dca102c.png",
+  "width": 1817,
+  "height": 866,
+  "bytes": 1971755,
+  "sha256": "8fa9baa681509a25077e5ecd3c5fc41976bce182ea889b1d802dbea8d14c4665",
+  "purpose": "Brand mood and main campaign hero only. This generated fashion editorial is not an exact photograph of any listed or purchasable product.",
+  "composition": {
+    "format": "single continuous landscape photograph",
+    "subject": "One adult male model in understated matte-black oversized streetwear and wide trousers",
+    "setting": "Monumental exposed-concrete architecture and a restrained stainless steel surface",
+    "leftQuietAreaPercent": 25,
+    "subjectCenterPercent": 61,
+    "recommendedObjectPosition": "61% center"
+  },
+  "constraints": [
+    "No copied brand photography, logos, text or slogans",
+    "No product photos replaced or modified",
+    "Do not infer a real SKU, stock, garment construction or purchase option from the editorial",
+    "Keep the generated PNG original; use separate optimized delivery variants"
+  ],
+  "inspection": "Visually inspected the generated PNG. The full adult model, shoes and headroom are visible; the left third is quiet and dark enough for a light navigation overlay."
+}

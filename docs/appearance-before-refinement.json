@@ -1,0 +1,52 @@
+{
+  "sourceCommit": "acc0666",
+  "revision": 3,
+  "note": "Appearance only. Do not replace product/customer/order records from this file.",
+  "heroImages": [
+    "/assets/campaign-wide.png",
+    "/assets/campaign.png"
+  ],
+  "journalImage": "/assets/campaign.png",
+  "homepage": {
+    "banners": [
+      {
+        "mobileImage": null,
+        "href": "/shop"
+      },
+      {
+        "mobileImage": null,
+        "href": "/shop"
+      }
+    ],
+    "slider01": [
+      "jacket",
+      "shell",
+      "denim",
+      "trousers",
+      "destroyed-knit-sweater-black",
+      "distressed-off-shoulder-knit-olive-grey",
+      "heavyweight-oversized-zip-hoodie-black",
+      "slim-cropped-zip-hoodie-heather-grey",
+      "star-stitch-ribbed-tank-top-black",
+      "ice-washed-graphic-layered-tee-blue"
+    ],
+    "campaign": {
+      "image": null,
+      "mobileImage": null
+    },
+    "journals": [
+      {
+        "image": "/assets/jacket-model-01.png",
+        "category": "OUTER"
+      },
+      {
+        "image": "/assets/clothes-ice-washed-graphic-layered-tee-blue.png",
+        "category": "TSHIRT"
+      },
+      {
+        "image": "/assets/denim-model-01.png",
+        "category": "BOTTOMS"
+      }
+    ]
+  }
+}

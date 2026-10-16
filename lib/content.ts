@@ -12,7 +12,7 @@ const categoryKey=z.enum(['OUTER','BOTTOMS','TOPS','ACC','KNITWEAR','HOODIES','T
 const destination=z.string().max(300).refine(x=>x===''||/^\/(?!\/)[a-zA-Z0-9/_?=&%#.-]*$/.test(x)||/^#[a-zA-Z0-9_-]+$/.test(x),'사이트 내부 주소만 입력하세요.');
 const tone=z.enum(['auto','light','dark']);
 const homepage=z.object({
- mediaLayout:z.literal('swapped-v1').optional(),heroTextTone:tone.optional(),journalSeason:z.string().trim().max(40).optional(),
+ mediaLayout:z.enum(['swapped-v1','refined-v2']).optional(),heroTextTone:tone.optional(),journalSeason:z.string().trim().max(40).optional(),
  banners:z.array(z.object({mobileImage:localImage.nullable().optional(),href:destination}).strict()).max(5),
  slider01:z.array(z.string().max(60)).max(10),slider02:z.array(z.string().max(60)).max(10).optional(),
  campaign:z.object({image:localImage.nullable(),mobileImage:localImage.nullable(),enabled:z.boolean().optional()}).strict(),

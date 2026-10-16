@@ -1,0 +1,31 @@
+{
+  "asset": "/assets/journal-layered-tee-model.png",
+  "title": "Layered Tee Category Editorial",
+  "createdAt": "2026-10-16",
+  "kind": "generated-illustrative-category-editorial",
+  "generator": "image_gen.imagegen",
+  "originalFile": "/workspace/generated_images/exec-25960bc7-6054-4213-bd3c-1d2795ea157d.png",
+  "width": 1122,
+  "height": 1402,
+  "bytes": 2192507,
+  "sha256": "af3ec4c491222387119efc9498191c60a3c5acd98b190f189b534becf4f43650",
+  "references": [
+    {
+      "asset": "/assets/clothes-ice-washed-graphic-layered-tee-blue.png",
+      "purpose": "Light-blue washed tee, ivory layered sleeves, centered existing abstract black graphic",
+      "sha256": "b4fbab20c15dc4f8d8236603ef5b7d2593c16070c55e1153f4b5a0ae421e2dc5"
+    },
+    {
+      "asset": "/assets/jacket-model-01.png",
+      "purpose": "Neutral light-gray studio background, subject scale, natural lighting and vertical portrait framing"
+    }
+  ],
+  "purpose": "Illustrative T-SHIRT category image in the collection journal only. Not an exact product photograph, SKU model image, fit guide or purchasable product variant.",
+  "constraints": [
+    "Do not replace the source product photo or an actual SKU modelImage",
+    "Do not infer real sizing, fit, stock or garment construction from this generated portrait",
+    "Original reference images remain unchanged",
+    "Use separate optimized image delivery variants"
+  ],
+  "inspection": "Viewed both source references before editing and visually inspected the generated PNG. One adult model is shown head to upper thighs against pale gray, wearing a light-blue washed tee with the existing centered black abstract graphic and ivory layered sleeves. No new text or logos were added."
+}

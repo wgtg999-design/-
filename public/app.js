@@ -58,6 +58,7 @@
   let heroTimer = null, heroTransitionTimer = null, heroRequest = 0;
   let heroPaused = false, heroHovered = false, heroFocused = false, heroInitialized = false;
   const heroLoads = new Map(), failedHeroSources = new Set();
+  const photoControllers = new WeakMap(), photoSelections = new Map();
   let shopSettings = {accepting:false, shippingFee:0, bankInfo:'', support:'', terms:'', privacy:'', returnGuide:''};
 
   function stored(key) { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; } }
@@ -81,16 +82,41 @@
     const model = source ? `<img class="packshot-model-layer" data-model-source="${esc(imageUrl(optimized(product.modelImage,isDetail?1600:960)))}" data-model-set="${esc(imageSet(product.modelImage))}" sizes="${sizes}" ${isDetail?'data-eager-model="true"':''} data-focus="${focus}" alt="" aria-hidden="true" decoding="async">` : '';
     const base=product.image==='/assets/products.png'?`style="background-image:url('${esc(imageUrl(optimized(product.image,1600)))}')"`:'style="background-image:none"';
     const original=product.image!=='/assets/products.png'?`<img class="product-original-layer" src="${esc(imageUrl(optimized(product.image,isDetail?1600:960)))}" srcset="${esc(imageSet(product.image))}" sizes="${sizes}" alt="" loading="${isDetail?'eager':'lazy'}" decoding="async">`:'';
-    return `<div class="product-photo packshot ${product.image === '/assets/products.png' ? product.crop : 'custom-photo'}" ${base} role="img" aria-label="${esc(label(product,'name'))}"><span class="packshot-stage" aria-hidden="true"></span>${original}${model}<span class="product-index">${String(products.indexOf(product) + 1).padStart(2, '0')}</span></div>`;
+    const selection = photoSelections.get(`${isDetail?'detail':'card'}:${product.id}`) || 'auto';
+    return `<div class="product-photo packshot ${product.image === '/assets/products.png' ? product.crop : 'custom-photo'}${selection==='model'?' show-model':''}" ${base} data-photo-product="${esc(product.id)}" data-photo-selection="${selection}" role="img" aria-label="${esc(label(product,'name'))}"><span class="packshot-stage" aria-hidden="true"></span>${original}${model}</div>`;
+  }
+  function photoViews(product, isDetail = false) {
+    if (!/^\/(assets\/[a-zA-Z0-9._-]+|media\/[a-f0-9-]+\.(png|jpg|webp))$/.test(product.modelImage || '')) return '';
+    const selected = photoSelections.get(`${isDetail?'detail':'card'}:${product.id}`) || 'product';
+    return `<div class="product-photo-views${isDetail?' detail-photo-views':''}" role="group" aria-label="${esc(t('product.photoViews'))}"><button class="photo-view-toggle" type="button" data-photo-view="product" aria-pressed="${selected!=='model'}">${esc(t('product.packshot'))}</button><button class="photo-view-toggle" type="button" data-photo-view="model" aria-pressed="${selected==='model'}">${esc(t('product.modelPhoto'))}</button></div>`;
   }
   function bindModelPhotos(root) {
     root.querySelectorAll('.packshot-model-layer').forEach(image => {
       const holder = image.closest('.product-photo');
-      const views = image.closest('.detail-gallery')?.querySelector('.detail-photo-views');
-      let checking = false;
+      const scope = image.closest('.product-media, .detail-gallery');
+      const views = scope?.querySelector('.product-photo-views');
+      const card = image.closest('.product-card');
+      const product = products.find(item => item.id === holder.dataset.photoProduct);
+      const selectionKey = `${card?'card':'detail'}:${holder.dataset.photoProduct}`;
+      let checking = false, requested = false, unavailable = false, hovering = false;
+      const sync = () => {
+        const ready = holder.classList.contains('is-model-ready');
+        const manual = holder.dataset.photoSelection;
+        const showingModel = ready && (manual==='model' || (manual==='auto' && hovering));
+        holder.classList.toggle('show-model', showingModel);
+        holder.classList.toggle('is-photo-preview', ready && manual==='auto' && hovering);
+        if (product) holder.setAttribute('aria-label', label(product,'name') + ' — ' + t(showingModel ? 'product.modelPhoto' : 'product.packshot'));
+        views?.querySelectorAll('[data-photo-view]').forEach(button => {
+          button.setAttribute('aria-pressed', String((button.dataset.photoView==='model')===showingModel));
+          if (button.dataset.photoView==='model') button.disabled = unavailable;
+        });
+        if (views) views.setAttribute('aria-busy', String(requested && !ready && !unavailable));
+      };
       const failed = () => {
+        unavailable = true;
+        holder.dataset.photoSelection = 'product'; photoSelections.set(selectionKey,'product');
         holder.classList.remove('has-model', 'is-model-ready', 'show-model'); image.remove();
-        if (views) views.hidden = true;
+        sync();
       };
       const ready = async () => {
         if (checking || !image.complete || !image.naturalWidth) return;
@@ -99,23 +125,58 @@
           if (image.decode) await image.decode();
           if (image.isConnected && image.naturalWidth) {
             holder.classList.add('has-model', 'is-model-ready');
-            if (views) views.hidden = false;
+            sync();
           }
         } catch { failed(); }
       };
-      let requested=false;
-      const request=()=>{if(requested||!image.dataset.modelSource)return;requested=true;if(image.dataset.modelSet)image.srcset=image.dataset.modelSet;image.src=image.dataset.modelSource;};
-      const card=image.closest('.product-card')||holder;
-      card.addEventListener('pointerenter',request,{once:true});card.addEventListener('focusin',request,{once:true});card.addEventListener('touchstart',request,{once:true,passive:true});
+      const request = () => {
+        if (requested || unavailable || !image.dataset.modelSource) return;
+        requested = true;
+        if (image.dataset.modelSet) image.srcset = image.dataset.modelSet;
+        image.src = image.dataset.modelSource; sync();
+      };
+      const select = view => {
+        if (!['product','model'].includes(view) || (view==='model' && unavailable)) return;
+        holder.dataset.photoSelection = view; photoSelections.set(selectionKey,view);
+        if (view==='model') request();
+        sync();
+      };
+      photoControllers.set(holder,{select});
+      if (card) {
+        card.addEventListener('pointerenter', () => { hovering = finePointer.matches; request(); sync(); });
+        card.addEventListener('pointerleave', () => { hovering = false; sync(); });
+        // Keyboard focus prepares the second image without choosing a view.
+        card.addEventListener('focusin', request, {once:true});
+      } else {
+        // Cards already use horizontal dragging to browse the product rail.
+        // Photo dragging belongs to the separate detail gallery only.
+        let drag = null;
+        const finishDrag = (x,y) => {
+          if (!drag) return;
+          const dx = x-drag.x, dy = y-drag.y; drag = null;
+          if (Math.abs(dx)>=36 && Math.abs(dx)>Math.abs(dy)*1.25) select(dx<0?'model':'product');
+        };
+        holder.addEventListener('pointerdown', event => {
+          if (event.pointerType!=='mouse' || event.button!==0) return;
+          drag = {x:event.clientX,y:event.clientY}; holder.setPointerCapture?.(event.pointerId);
+        });
+        holder.addEventListener('pointermove', event => {
+          if (drag && Math.abs(event.clientX-drag.x)>8 && Math.abs(event.clientX-drag.x)>Math.abs(event.clientY-drag.y)) event.preventDefault();
+        }, {passive:false});
+        holder.addEventListener('pointerup', event => { if (event.pointerType==='mouse') finishDrag(event.clientX,event.clientY); });
+        holder.addEventListener('pointercancel', () => { drag = null; });
+        holder.addEventListener('dragstart', event => event.preventDefault());
+        holder.addEventListener('touchstart', event => { const touch=event.touches[0]; drag=event.touches.length===1 && touch ? {x:touch.clientX,y:touch.clientY} : null; }, {passive:true});
+        holder.addEventListener('touchend', event => { const touch=event.changedTouches[0]; if (touch) finishDrag(touch.clientX,touch.clientY); }, {passive:true});
+        holder.addEventListener('touchcancel', () => { drag = null; }, {passive:true});
+      }
       if(image.dataset.eagerModel)request();
+      if(holder.dataset.photoSelection==='model')request();
       image.addEventListener('load', ready, {once:true});
       image.addEventListener('error', failed, {once:true});
       if (image.getAttribute('src')&&image.complete) { if (image.naturalWidth) ready(); else failed(); }
+      sync();
     });
-  }
-  function favoriteButton(product) {
-    const selected = favorites.has(product.id);
-    return `<button class="wishlist-toggle" data-wishlist="${esc(product.id)}" aria-pressed="${selected}" aria-label="${esc(t(selected ? 'product.unsaveAria' : 'product.saveAria', {name:label(product,'name')}))}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20 3.5 11.6C-1 6.8 5.8 1.1 12 6.6c6.2-5.5 13 0.2 8.5 5L12 20Z"/></svg></button>`;
   }
   function matches(product) {
     const names = [product.name, product.color, ...Object.values(product.translations || {}).flatMap(copy => [copy.name, copy.color])];
@@ -130,7 +191,7 @@
     const title = $('.section-title h2'); title.removeAttribute('data-i18n');
     title.textContent = t(view === 'best' ? 'shop.bestTitle' : view === 'wishlist' ? 'shop.wishlistTitle' : 'shop.productTitle');
     const settings = content.homepage;
-    const card = product => `<article class="product-card"><a class="product" href="/products/${encodeURIComponent(product.id)}" aria-label="${esc(label(product,'name'))}">${photo(product)}</a><div class="quick-panel"><h3>${esc(label(product,'name'))}</h3><p>${money(product.price)}</p><button type="button" data-product="${esc(product.id)}">QUICK ADD +</button></div>${pageMode==='shop'?favoriteButton(product):''}</article>`;
+    const card = product => `<article class="product-card"><div class="product-media"><a class="product" href="/products/${encodeURIComponent(product.id)}" aria-label="${esc(label(product,'name'))}">${photo(product)}</a>${photoViews(product)}</div><div class="quick-panel"><h3>${esc(label(product,'name'))}</h3><p>${money(product.price)}</p><button type="button" data-product="${esc(product.id)}">QUICK ADD +</button></div></article>`;
     const choose = ids => ids === undefined ? list.slice(0,10) : ids.map(id=>list.find(p=>p.id===id)).filter(Boolean).slice(0,10);
     const displayed = pageMode === 'home' ? choose(settings?.slider01) : list;
     $('#products').innerHTML = displayed.map(card).join('');
@@ -158,7 +219,7 @@
     else if(pageMode==='product'&&routeProduct===id)renderProduct(id,$('#size')?.value,true);
   }
   function detailGallery(product) {
-    return `<div class="detail-gallery">${photo(product, true)}<div class="detail-photo-views" role="group" aria-label="${esc(t('product.photoViews'))}" hidden><button type="button" data-photo-view="product" aria-pressed="true">${esc(t('product.packshot'))}</button><button type="button" data-photo-view="model" aria-pressed="false">${esc(t('product.modelPhoto'))}</button></div></div>`;
+    return `<div class="detail-gallery">${photo(product, true)}${photoViews(product,true)}</div>`;
   }
   function renderProduct(id, selectedSize = '', inline = false) {
     const product = products.find(item => item.id === id); if (!product) return;
@@ -281,6 +342,7 @@
   }
   function updateHeroControls() {
     const images = content?.heroImages || [], pagination = $('.hero-pagination');
+    $('.hero-controls').hidden = images.length < 2;
     if (pagination.children.length !== images.length) {
       pagination.innerHTML = images.map((_, index) => `<button type="button" data-slide="${index}"></button>`).join('');
     }
@@ -389,8 +451,10 @@
       const canvas=document.createElement('canvas');canvas.width=80;canvas.height=80;
       const context=canvas.getContext('2d',{willReadFrequently:true});
       const rect=image.getBoundingClientRect(),ratio=rect.width/Math.max(rect.height,1),natural=image.naturalWidth/image.naturalHeight;
+      const style=getComputedStyle(image),position=style.objectPosition.trim().split(/\s+/);
+      const fraction=value=>value==='left'||value==='top'?0:value==='right'||value==='bottom'?1:/^-?\d+(\.\d+)?%$/.test(value)?Math.max(0,Math.min(1,parseFloat(value)/100)):.5;
       let sx=0,sy=0,sw=image.naturalWidth,sh=image.naturalHeight;
-      if(getComputedStyle(image).objectFit==='cover'){if(natural>ratio){sw=sh*ratio;sx=(image.naturalWidth-sw)/2;}else{sh=sw/ratio;sy=(image.naturalHeight-sh)/2;}}
+      if(style.objectFit==='cover'){if(natural>ratio){sw=sh*ratio;sx=(image.naturalWidth-sw)*fraction(position[0]);}else{sh=sw/ratio;sy=(image.naturalHeight-sh)*fraction(position[1]||'50%');}}
       context.drawImage(image,sx,sy,sw,sh,0,0,80,80);
       const [x,y,right,bottom]=region,pixels=context.getImageData(Math.floor(x*80),Math.floor(y*80),Math.max(1,Math.floor((right-x)*80)),Math.max(1,Math.floor((bottom-y)*80))).data;
       let luminance=0;for(let i=0;i<pixels.length;i+=4){const channel=v=>v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4);luminance+=.2126*channel(pixels[i]/255)+.7152*channel(pixels[i+1]/255)+.0722*channel(pixels[i+2]/255);}
@@ -401,12 +465,21 @@
   function updateHeroInk(){
     const image=$('#hero-photo');if(!image.naturalWidth)return;
     const tone=content?.homepage?.heroTextTone||'auto';
-    adaptImageText(image,sidebar,tone,'--hero-ink',[0,0,.3,1]);
+    const menuWidth=Math.min(1,sidebar.getBoundingClientRect().width/Math.max(image.getBoundingClientRect().width,1));
+    adaptImageText(image,sidebar,tone,'--hero-ink',[0,0,menuWidth,.65]);
     adaptImageText(image,campaign,tone,'--hero-ink',[0,.7,1,1]);
   }
   $('#hero-photo').addEventListener('load',updateHeroInk);
   window.addEventListener('resize',()=>{updateHeroInk();document.querySelectorAll('#journal-categories a').forEach(link=>{const image=link.querySelector('img');if(image?.naturalWidth)adaptImageText(image,link,link.dataset.textTone,'--journal-ink',[.4,.65,1,1]);});},{passive:true});
-  function heroSource(index) { return imageUrl(optimized((mobile.matches && content.homepage?.banners[index]?.mobileImage) || content.heroImages[index],Math.ceil(innerWidth*devicePixelRatio))); }
+  function heroSource(index) {
+    const source=(mobile.matches && content.homepage?.banners[index]?.mobileImage) || content.heroImages[index];
+    const metadata=media.variants?.[source],rect=campaign.getBoundingClientRect();
+    const ratio=metadata?.width>0 && metadata?.height>0 ? metadata.width/metadata.height : 1;
+    // A wide photograph covering a tall mobile banner needs enough pixels for
+    // its rendered height, even though only a narrow slice is visible.
+    const width=Math.max(rect.width||innerWidth,rect.height*ratio);
+    return imageUrl(optimized(source,Math.ceil(width*devicePixelRatio)));
+  }
   function updateHeroLink() {
     $('#hero-link').href = '/shop';
   }
@@ -475,13 +548,9 @@
     const favorite = event.target.closest('[data-wishlist]'); if (favorite) { toggleFavorite(favorite.dataset.wishlist); return; }
     const photoView = event.target.closest('[data-photo-view]');
     if (photoView) {
-      const gallery = photoView.closest('.detail-gallery'), holder = gallery.querySelector('.product-photo');
-      if (!holder.classList.contains('is-model-ready')) return;
-      const model = photoView.dataset.photoView === 'model';
-      holder.classList.toggle('show-model', model);
-      gallery.querySelectorAll('[data-photo-view]').forEach(button => button.setAttribute('aria-pressed', String(button === photoView)));
-      const product = products.find(item => item.id === currentProduct);
-      holder.setAttribute('aria-label', label(product,'name') + ' — ' + t(model ? 'product.modelPhoto' : 'product.packshot'));
+      event.preventDefault(); event.stopPropagation();
+      const holder = photoView.closest('.product-media, .detail-gallery')?.querySelector('.product-photo');
+      photoControllers.get(holder)?.select(photoView.dataset.photoView);
       return;
     }
     const product = event.target.closest('[data-product]'); if (product) { openProduct(product.dataset.product); return; }
@@ -593,7 +662,7 @@
   document.querySelectorAll('.product-slider').forEach(track => {
     let drag = null, suppressClick = false;
     track.addEventListener('pointerdown', event => {
-      if (event.pointerType !== 'mouse' || event.button !== 0 || event.target.closest('.quick-panel, .wishlist-toggle')) return;
+      if (event.pointerType !== 'mouse' || event.button !== 0 || event.target.closest('.quick-panel, .product-photo-views')) return;
       drag = {x:event.clientX, scroll:track.scrollLeft, moved:false};
     });
     window.addEventListener('pointermove', event => {
