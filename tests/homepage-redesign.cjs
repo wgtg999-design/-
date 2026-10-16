@@ -91,8 +91,8 @@ async function testDetailPhotoDragging(page){
  assert.equal(await scope.locator('.product-photo').getAttribute('data-photo-selection'),'product');
  await noHeartButtons(page);
 }
-async function testMobilePhotoDragging(page){
- await page.goto(origin+'/products/jacket');await page.waitForSelector('#detail-page-content h2');
+async function testMobilePhotoDragging(page,id='jacket'){
+ await page.goto(origin+'/products/'+id);await page.waitForSelector('#detail-page-content h2');
  const scope=page.locator('#detail-page-content .detail-gallery');await selectProductPhoto(page,scope,'product');
  const box=await scope.locator('.product-photo').boundingBox(),y=Math.max(80,Math.min(600,box.y+100)),cdp=await page.context().newCDPSession(page);
  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:box.x+box.width*.8,y}]});
@@ -100,12 +100,12 @@ async function testMobilePhotoDragging(page){
  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
  await scope.locator('.product-photo[data-photo-selection="model"].show-model.is-model-ready').waitFor();
  await selectProductPhoto(page,scope,'product');await selectProductPhoto(page,scope,'model');
- assert.equal(new URL(page.url()).pathname,'/products/jacket');assert.equal(await page.locator('#bag-count').textContent(),'0');await noHeartButtons(page);
+ assert.equal(new URL(page.url()).pathname,'/products/'+id);assert.equal(await page.locator('#bag-count').textContent(),'0');await noHeartButtons(page);
 }
-async function testMissingModelPhoto(){
+async function testMissingModelPhoto(id='jacket',asset='jacket-model-01'){
  const page=await pageFor();let blocked=0;
- await page.route('**/assets/jacket-model-01*',route=>{blocked++;return route.fulfill({status:404,body:'Missing fixture image'});});
- await page.goto(origin+'/products/jacket');await page.waitForSelector('#detail-page-content h2');
+ await page.route('**/assets/'+asset+'*',route=>{blocked++;return route.fulfill({status:404,body:'Missing fixture image'});});
+ await page.goto(origin+'/products/'+id);await page.waitForSelector('#detail-page-content h2');
  const scope=page.locator('#detail-page-content .detail-gallery');
  await scope.locator('[data-photo-view="model"]').waitFor({state:'visible'});
  await page.waitForFunction(()=>document.querySelector('#detail-page-content [data-photo-view="model"]').disabled);
@@ -114,7 +114,33 @@ async function testMissingModelPhoto(){
  assert.equal(await scope.locator('[data-photo-view="model"]').getAttribute('aria-pressed'),'false');
  assert.equal(await scope.locator('.product-photo').getAttribute('data-photo-selection'),'product');
  assert(!(await scope.locator('.product-photo').getAttribute('class')).includes('show-model'));
+ if(await scope.locator('.generated-model-note').count())assert.equal(await visibleGeneratedNote(scope),false);
  assert.equal(await page.locator('#bag-count').textContent(),'0');await page.close();
+}
+async function visibleGeneratedNote(scope){return scope.locator('.generated-model-note').evaluate(note=>{const style=getComputedStyle(note);return style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity)>0;});}
+async function testEntireCatalogPhotoPairs(page,mobile){
+ const products=(await(await page.request.get(origin+'/api/content')).json()).content.products;
+ assert.equal(products.length,19);assert(products.every(product=>product.modelImage));assert.equal(products.filter(product=>product.modelImageKind==='generated').length,9);
+ await page.goto(origin+'/shop');await page.waitForSelector('#products .product-card');assert.equal(await page.locator('#products .product-photo-views button').count(),38);
+ for(const product of products){
+  const card=page.locator('#products .product-card').filter({has:page.locator('a[href="/products/'+product.id+'"]')});
+  await card.scrollIntoViewIfNeeded();await card.hover();await card.locator('.is-model-ready').waitFor();
+  assert((await card.locator('.packshot-model-layer').getAttribute('src')).includes(path.basename(product.modelImage).replace('.png','-')));
+  const generated=product.modelImageKind==='generated';assert.equal(await card.locator('.generated-model-note').count(),generated?1:0);
+  await selectProductPhoto(page,card,'product');if(generated)assert.equal(await visibleGeneratedNote(card),false);
+  await selectProductPhoto(page,card,'model');if(generated)assert.equal(await visibleGeneratedNote(card),true);
+ }
+ await noHeartButtons(page);
+ for(const product of products){
+  await page.goto(origin+'/products/'+product.id);await page.waitForSelector('#detail-page-content h2');const gallery=page.locator('#detail-page-content .detail-gallery');
+  assert.equal(await gallery.locator('[data-photo-view]').count(),2);await selectProductPhoto(page,gallery,'model');await selectProductPhoto(page,gallery,'product');
+  assert.equal(await page.locator('.generated-model-description').count(),product.modelImageKind==='generated'?1:0);
+  assert.equal(await page.locator('#add').isDisabled(),product.sizes.length===0);assert.equal(await page.locator('#bag-count').textContent(),'3');
+ }
+ await mobile.goto(origin+'/shop');await mobile.waitForSelector('#products .product-card');assert.equal(await mobile.locator('#products .product-photo-views button').count(),38);
+ for(const product of products){const card=mobile.locator('#products .product-card').filter({has:mobile.locator('a[href="/products/'+product.id+'"]')});await selectProductPhoto(mobile,card,'model');await selectProductPhoto(mobile,card,'product');}
+ await testMobilePhotoDragging(mobile,'destroyed-knit-sweater-black');assert.equal(await mobile.locator('.generated-model-description').count(),1);
+ console.log('ALL MODEL PAIRS',JSON.stringify({products:products.length,generated:9,supplied:10,desktopAndMobileButtons:38}));
 }
 function testRefinedPresetParity(){
  const {refinedStorefront,firstBanner}=load(path.join(root,'lib/storefront-media.ts')),context={window:{}};
@@ -176,5 +202,5 @@ await page.goto(origin+'/products/jacket');await page.waitForSelector('#detail-p
 const mobile=await pageFor(390);await mobile.goto(origin);await mobile.waitForSelector('#products .product-card');const heroBefore=await mobile.locator('#hero-photo').getAttribute('src'),heroCdp=await mobile.context().newCDPSession(mobile);await heroCdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:340,y:400}]});for(let x=320;x>=70;x-=25)await heroCdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:400}]});await heroCdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await mobile.waitForTimeout(700);assert.notEqual(await mobile.locator('#hero-photo').getAttribute('src'),heroBefore);assert.equal(new URL(mobile.url()).pathname,'/');await mobile.locator('#products').scrollIntoViewIfNeeded();const metrics=await mobile.locator('#products').evaluate(el=>({width:el.clientWidth,card:el.firstElementChild.getBoundingClientRect().width}));assert(Math.abs(metrics.card*2-metrics.width)<2);const touch=await mobile.locator('#products').boundingBox(),cdp=await mobile.context().newCDPSession(mobile),y=Math.max(80,touch.y+80);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:340,y}]});for(let x=320;x>=70;x-=25)await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y}]});await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await mobile.waitForTimeout(350);assert(await mobile.locator('#products').evaluate(el=>el.scrollLeft>0));assert(await mobile.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
 await mobile.goto(origin+'/shop?category=KNITWEAR');await mobile.waitForSelector('#products .product-card');assert.equal(await mobile.locator('#products .product-card').count(),2);assert.equal(await mobile.locator('#products').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),2);await testMobilePhotoDragging(mobile);await mobile.goto(origin+'/admin');await mobile.waitForSelector('#editor:not([hidden])');assert(await mobile.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
 await page.goto(origin+'/admin');await page.waitForSelector('#editor:not([hidden])');await page.click('#import-bottoms');await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('새 상품 12개'));const batch=JSON.parse(db.prepare('SELECT data FROM store_content').get().data);assert.equal(batch.products.length,25);assert.equal(batch.products.filter(p=>p.visible).length,19);assert.equal(batch.products.filter(p=>p.image==='/assets/product-image-pending.svg').length,6);await page.reload();await page.waitForSelector('#editor:not([hidden])');assert.equal(await page.locator('[data-key="visible"]:disabled').count(),6);await page.goto(origin+'/shop');await page.waitForSelector('#products .product-card');assert.equal(await page.locator('#products .product-card').count(),19);const pants=page.locator('.product-card').filter({has:page.locator('.quick-panel h3',{hasText:'Eyelet Strap Panel Wide Denim Pants'})});await pants.scrollIntoViewIfNeeded();assert.equal(await pants.locator('.packshot-model-layer').getAttribute('src'),null);await pants.hover();await pants.locator('.is-model-ready').waitFor();assert((await pants.locator('.packshot-model-layer').getAttribute('src')).includes('bottoms-01-model-'));assert((await pants.locator('.product-original-layer').getAttribute('src')).includes('bottoms-01-base-'));assert.equal((await page.request.get(origin+'/products/eyelet-belt-pleated-cargo-mini-skirt-charcoal')).status(),404);
-await testMissingModelPhoto();await captureRefinementScreenshots(page,mobile);assert.deepEqual(errors,[]);assert.deepEqual(external,[]);console.log('PASS: cover-aware mobile hero resolution at DPR 1 and 3/no 480px landscape stretch, default desktop sidebar automatic white contrast; no product hearts; repeated explicit base/model buttons and keyboard selection override hover, native mobile taps and detail mouse/touch swipe, vertical drag ignored, missing-model fallback, unchanged navigation/cart;  SSR current banner before JS/no duplicate content fetch/responsive WebP/no full-size PNG flash; demand-loaded model photos; separate 12-product batch with 6 visible and 6 protected drafts; banner/campaign exchange/idempotence; inside-image bold category/thin seasonal label and season save/reload; automatic black/white contrast against synthetic backgrounds; top-row sprite bleed suppression; campaign full ratio/custom override/visibility save/reload and Korean brand/all-product editor defaults; journal images work before import and with legacy null settings/accurate T-shirt link/no writes; real SQLite additive admin import twice, save/reload/preview, exact 13-product SHOP ALL, standalone visible/hidden detail routes, single 10-product home rail, desktop thirds/zero gaps/4s/pause, real drag/product and hero touch swipe, English bottom overlay/options/cart/quantity/reload, missing-variant purchase denial, filters/sort/search/category accuracy, campaign fixture/no overlays/three journal images, mobile halves and 2-column catalogue, zero external requests/page errors.');
+await testEntireCatalogPhotoPairs(page,mobile);await testMissingModelPhoto();await testMissingModelPhoto('destroyed-knit-sweater-black','model-destroyed-knit-black');await captureRefinementScreenshots(page,mobile);assert.deepEqual(errors,[]);assert.deepEqual(external,[]);console.log('PASS: all 19 products have matched base/model controls on desktop and mobile and actual detail image switches; nine generated previews labelled separately from ten supplied photos, failed generated model falls back safely; cover-aware mobile hero resolution at DPR 1 and 3/no 480px landscape stretch, default desktop sidebar automatic white contrast; no product hearts; repeated explicit base/model buttons and keyboard selection override hover, native mobile taps and detail mouse/touch swipe, vertical drag ignored, missing-model fallback, unchanged navigation/cart;  SSR current banner before JS/no duplicate content fetch/responsive WebP/no full-size PNG flash; demand-loaded model photos; separate 12-product batch with 6 visible and 6 protected drafts; banner/campaign exchange/idempotence; inside-image bold category/thin seasonal label and season save/reload; automatic black/white contrast against synthetic backgrounds; top-row sprite bleed suppression; campaign full ratio/custom override/visibility save/reload and Korean brand/all-product editor defaults; journal images work before import and with legacy null settings/accurate T-shirt link/no writes; real SQLite additive admin import twice, save/reload/preview, exact 13-product SHOP ALL, standalone visible/hidden detail routes, single 10-product home rail, desktop thirds/zero gaps/4s/pause, real drag/product and hero touch swipe, English bottom overlay/options/cart/quantity/reload, missing-variant purchase denial, filters/sort/search/category accuracy, campaign fixture/no overlays/three journal images, mobile halves and 2-column catalogue, zero external requests/page errors.');
 }finally{await browser.close();server.close();db.close();}})().catch(error=>{console.error(error);server.close();try{db.close()}catch{}process.exitCode=1});

@@ -17,7 +17,7 @@ function busyState(value){
     if(list)element.disabled=value||(action.endsWith('up')&&index===0)||(action.endsWith('down')&&index===list.length-1);
   });
   document.querySelectorAll('[data-key="visible"]').forEach(element=>element.disabled=value||content?.products[Number(element.dataset.product)]?.image==='/assets/product-image-pending.svg');
-  document.querySelectorAll('[data-key="modelFocus"]').forEach(element=>element.disabled=value||!content?.products[Number(element.dataset.product)]?.modelImage);
+  document.querySelectorAll('[data-key="modelFocus"],[data-key="modelImageKind"]').forEach(element=>element.disabled=value||!content?.products[Number(element.dataset.product)]?.modelImage);
 }
 async function api(path,options){
   const response=await fetch(path,{cache:'no-store',...options});
@@ -55,7 +55,7 @@ function renderBrandTranslations(){
 function productLocale(product){return productLocales.get(product.id)||'ko'}
 function modelPhoto(product,index){
   const focus=product.modelFocus||'center';
-  return `<div class="model-photo-editor"><h3>착용 사진 (선택)</h3>${product.modelImage?`<img class="model-photo-preview" src="${esc(product.modelImage)}" data-focus="${esc(focus)}" alt="${esc(product.name)} 착용 사진">`:'<p class="model-photo-empty">착용 사진을 등록하면 상품에 커서를 올릴 때 이 사진으로 전환됩니다.</p>'}<div class="visual-actions"><label class="button">${product.modelImage?'착용 사진 교체':'착용 사진 등록'}<input type="file" hidden accept="image/jpeg,image/png,image/webp" data-upload="model" data-index="${index}"></label>${product.modelImage?`<button type="button" data-action="model-remove" data-index="${index}">착용 사진 제거</button>`:''}</div><label class="model-focus-label">착용 사진 중심<select data-product="${index}" data-key="modelFocus" ${product.modelImage?'':'disabled'}>${[['center','전체 · 중앙'],['upper','상의 중심'],['lower','하의 중심']].map(([value,label])=>`<option value="${value}" ${focus===value?'selected':''}>${label}</option>`).join('')}</select></label><p class="editor-help">이 상품을 실제로 착용한 사진을 올려 주세요. JPG·PNG·WebP, 최대 8MB. 저장 후 홈페이지에 반영됩니다.</p></div>`;
+  return `<div class="model-photo-editor"><h3>착용 사진 (선택)</h3>${product.modelImage?`<img class="model-photo-preview" src="${esc(product.modelImage)}" data-focus="${esc(focus)}" alt="${esc(product.name)} 착용 사진">`:'<p class="model-photo-empty">착용 사진을 등록하면 상품에 커서를 올릴 때 이 사진으로 전환됩니다.</p>'}<div class="visual-actions"><label class="button">${product.modelImage?'착용 사진 교체':'착용 사진 등록'}<input type="file" hidden accept="image/jpeg,image/png,image/webp" data-upload="model" data-index="${index}"></label>${product.modelImage?`<button type="button" data-action="model-remove" data-index="${index}">착용 사진 제거</button>`:''}</div><label class="model-focus-label">착용 사진 중심<select data-product="${index}" data-key="modelFocus" ${product.modelImage?'':'disabled'}>${[['center','전체 · 중앙'],['upper','상의 중심'],['lower','하의 중심']].map(([value,label])=>`<option value="${value}" ${focus===value?'selected':''}>${label}</option>`).join('')}</select></label><label class="model-kind-label">착용 이미지 종류<select data-product="${index}" data-key="modelImageKind" ${product.modelImage?'':'disabled'}><option value="photo" ${product.modelImageKind!=='generated'?'selected':''}>실제 사진</option><option value="generated" ${product.modelImageKind==='generated'?'selected':''}>AI 착용 시안</option></select></label><p class="editor-help">AI 시안은 고객 화면에 표시됩니다. 이 상품에 맞는 착용 이미지를 올려 주세요. JPG·PNG·WebP, 최대 8MB. 저장 후 홈페이지에 반영됩니다.</p></div>`;
 }
 function productCard(product,index){
   const locale=productLocale(product);
@@ -131,7 +131,7 @@ document.addEventListener('click',event=>{
     content.homepage?.banners.splice(index,1);
   }else if(action==='model-remove'){
     const product=content.products[index];if(!product)return;
-    product.modelImage=null;delete product.modelFocus;
+    product.modelImage=null;delete product.modelFocus;delete product.modelImageKind;
   }else{
     const list=action.startsWith('hero')?content.heroImages:content.products,next=index+(action.endsWith('up')?-1:1);
     if(next<0||next>=list.length)return;
@@ -168,8 +168,8 @@ document.addEventListener('change',async event=>{
     const data=await api('/api/admin/upload',{method:'POST',headers:{'Content-Type':file.type},body:file});
     if(type==='hero'){if(index===null){content.heroImages.push(data.url);content.homepage?.banners.push({href:'',mobileImage:null});}else content.heroImages[index]=data.url}
     else if(type==='journal')content.journalImage=data.url;
-    else if(type==='model'){content.products[index].modelImage=data.url;content.products[index].modelFocus??='center'}
-    else{content.products[index].image=data.url;content.products[index].crop=''}
+    else if(type==='model'){content.products[index].modelImage=data.url;content.products[index].modelFocus??='center';content.products[index].modelImageKind='photo'}
+    else{const product=content.products[index];if(product.modelImageKind==='generated'){product.modelImage=null;delete product.modelFocus;delete product.modelImageKind;}product.image=data.url;product.crop=''}
     mark();render();status('사진 업로드 완료. 변경사항 저장을 누르면 홈페이지에 반영됩니다.');
   }catch(error){status(error.message,true)}finally{busyState(false)}
 });

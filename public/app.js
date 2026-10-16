@@ -83,7 +83,8 @@
     const base=product.image==='/assets/products.png'?`style="background-image:url('${esc(imageUrl(optimized(product.image,1600)))}')"`:'style="background-image:none"';
     const original=product.image!=='/assets/products.png'?`<img class="product-original-layer" src="${esc(imageUrl(optimized(product.image,isDetail?1600:960)))}" srcset="${esc(imageSet(product.image))}" sizes="${sizes}" alt="" loading="${isDetail?'eager':'lazy'}" decoding="async">`:'';
     const selection = photoSelections.get(`${isDetail?'detail':'card'}:${product.id}`) || 'auto';
-    return `<div class="product-photo packshot ${product.image === '/assets/products.png' ? product.crop : 'custom-photo'}${selection==='model'?' show-model':''}" ${base} data-photo-product="${esc(product.id)}" data-photo-selection="${selection}" role="img" aria-label="${esc(label(product,'name'))}"><span class="packshot-stage" aria-hidden="true"></span>${original}${model}</div>`;
+    const generated=source&&product.modelImageKind==='generated'?`<span class="generated-model-note" title="${esc(t('product.generatedModelDescription'))}">${esc(t('product.generatedModel'))}</span>`:'';
+    return `<div class="product-photo packshot ${product.image === '/assets/products.png' ? product.crop : 'custom-photo'}${selection==='model'?' show-model':''}" ${base} data-photo-product="${esc(product.id)}" data-photo-selection="${selection}" role="img" aria-label="${esc(label(product,'name'))}"><span class="packshot-stage" aria-hidden="true"></span>${original}${model}${generated}</div>`;
   }
   function photoViews(product, isDetail = false) {
     if (!/^\/(assets\/[a-zA-Z0-9._-]+|media\/[a-f0-9-]+\.(png|jpg|webp))$/.test(product.modelImage || '')) return '';
@@ -105,7 +106,7 @@
         const showingModel = ready && (manual==='model' || (manual==='auto' && hovering));
         holder.classList.toggle('show-model', showingModel);
         holder.classList.toggle('is-photo-preview', ready && manual==='auto' && hovering);
-        if (product) holder.setAttribute('aria-label', label(product,'name') + ' — ' + t(showingModel ? 'product.modelPhoto' : 'product.packshot'));
+        if (product) holder.setAttribute('aria-label', label(product,'name') + ' — ' + t(showingModel ? 'product.modelPhoto' : 'product.packshot') + (showingModel&&product.modelImageKind==='generated'?' · '+t('product.generatedModelDescription'):''));
         views?.querySelectorAll('[data-photo-view]').forEach(button => {
           button.setAttribute('aria-pressed', String((button.dataset.photoView==='model')===showingModel));
           if (button.dataset.photoView==='model') button.disabled = unavailable;
@@ -219,7 +220,7 @@
     else if(pageMode==='product'&&routeProduct===id)renderProduct(id,$('#size')?.value,true);
   }
   function detailGallery(product) {
-    return `<div class="detail-gallery">${photo(product, true)}${photoViews(product,true)}</div>`;
+    return `<div class="detail-gallery">${photo(product, true)}${photoViews(product,true)}${product.modelImage&&product.modelImageKind==='generated'?`<p class="generated-model-description">${esc(t('product.generatedModelDescription'))}</p>`:''}</div>`;
   }
   function renderProduct(id, selectedSize = '', inline = false) {
     const product = products.find(item => item.id === id); if (!product) return;

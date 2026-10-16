@@ -56,7 +56,21 @@ function load(relative) {
   vm.runInThisContext('(function(require,module,exports){' + code + '\n})', { filename })(requireLocal, module, module.exports);
   return module.exports;
 }
-const { defaults, contentSchema } = load('lib/content.ts');
+const { defaults, contentSchema, withBundledModelPhotos } = load('lib/content.ts');
+const { mergeSuppliedProducts } = load('lib/catalog-import.ts');
+const { mergeBottomsProducts } = load('lib/bottoms-import.ts');
+const generatedModels = {
+  'destroyed-knit-sweater-black':'/assets/model-destroyed-knit-black.png',
+  'distressed-off-shoulder-knit-olive-grey':'/assets/model-off-shoulder-knit-olive.png',
+  'heavyweight-oversized-zip-hoodie-black':'/assets/model-oversized-hoodie-black.png',
+  'slim-cropped-zip-hoodie-heather-grey':'/assets/model-cropped-hoodie-grey.png',
+  'star-stitch-ribbed-tank-top-black':'/assets/model-star-tank-black.png',
+  'ice-washed-graphic-layered-tee-blue':'/assets/journal-layered-tee-model.png',
+  'vintage-washed-gothic-crop-long-sleeve-charcoal':'/assets/model-gothic-crop-charcoal.png',
+  'thorn-graphic-layered-tee-burgundy':'/assets/model-thorn-layered-burgundy.png',
+  'vintage-washed-utility-jacket-brown':'/assets/model-utility-jacket-brown.png',
+};
+const catalogueFixture = () => mergeBottomsProducts(mergeSuppliedProducts(structuredClone(defaults)).content).content;
 const contentRoute = load('app/api/admin/content/route.ts');
 const uploadRoute = load('app/api/admin/upload/route.ts');
 const publicRoute = load('app/api/content/route.ts');
@@ -75,6 +89,26 @@ async function check(label, work) { await work(); results.push(label); console.l
 function stored() { return JSON.parse(row.data); }
 
 (async () => {
+  await check('all 19 public products receive their exact matching model images; supplied photos remain distinct from nine generated previews', async () => {
+    const source=catalogueFixture(),before=JSON.stringify(source),result=withBundledModelPhotos(source),visible=result.products.filter(product=>product.visible);
+    assert.equal(visible.length,19);assert(visible.every(product=>product.modelImage));assert.equal(visible.filter(product=>product.modelImageKind==='generated').length,9);
+    for(const [id,image] of Object.entries(generatedModels)){
+      const product=result.products.find(product=>product.id===id);assert.equal(product.modelImage,image);assert.equal(product.modelImageKind,'generated');assert(fs.existsSync(path.join(root,'public',image)));
+      assert.equal(product.image,source.products.find(product=>product.id===id).image);assert.deepEqual(product.sizes,[]);
+    }
+    assert(visible.filter(product=>!Object.hasOwn(generatedModels,product.id)).every(product=>product.modelImageKind!=='generated'));
+    assert.equal(JSON.stringify(source),before);assert.deepEqual(withBundledModelPhotos(result),result);
+  });
+  await check('generated fallbacks never replace explicit removal/custom photos or attach to a different base image or crop; reads do not write the database', async () => {
+    for(const [id] of Object.entries(generatedModels)){
+      for(const change of [{modelImage:null},{modelImage:'/assets/campaign.png',modelImageKind:'photo'},{image:'/assets/campaign.png'},{crop:'right'}]){
+        const source=catalogueFixture(),product=source.products.find(product=>product.id===id);Object.assign(product,change);
+        assert.deepEqual(withBundledModelPhotos(source).products.find(product=>product.id===id),product);
+      }
+    }
+    row={data:JSON.stringify(catalogueFixture()),revision:4,updated_at:'2026-10-16T00:00:00Z'};const before=JSON.stringify(row),writes=saveCount;
+    const result=await (await publicRoute.GET()).json();assert.equal(result.content.products.length,19);assert(result.content.products.every(product=>product.modelImage));assert.equal(JSON.stringify(row),before);assert.equal(saveCount,writes);row=null;
+  });
   await check('older content remains unchanged; model image and all focus values validate without invented defaults', async () => {
     assert.deepEqual(contentSchema.parse(defaults), defaults);
     assert(defaults.products.every(product => !Object.hasOwn(product, 'modelImage') && !Object.hasOwn(product, 'modelFocus')));
@@ -87,6 +121,8 @@ function stored() { return JSON.parse(row.data); }
     const content = fixture();
     content.products[0].modelImage = '/media/6b42d509-1cad-41f2-844f-412c24beffec.webp';
     assert.equal(contentSchema.safeParse(content).success, true);
+    for(const kind of ['photo','generated']){content.products[0].modelImageKind=kind;assert.equal(contentSchema.safeParse(content).success,true);}
+    content.products[0].modelImageKind='unknown';assert.equal(contentSchema.safeParse(content).success,false);
   });
   await check('server rejects remote, script, malformed and traversal model images and unknown focus values', async () => {
     for (const modelImage of ['https://example.test/model.png', '//example.test/model.png', 'javascript:alert(1)', 'data:image/png;base64,test', '/assets/../model.png', '/media/../../x.jpg', '/assets/model.png?x=1', '/media/model.svg', '/assets/model.png\" onload=\"x', '']) {
@@ -145,6 +181,8 @@ function stored() { return JSON.parse(row.data); }
         const file = media.get(pathname); response.writeHead(200, { 'Content-Type': file.type }); response.end(file.bytes); return;
       }
       const files = { '/assets/editorial-silent-structure.png': ['public/assets/editorial-silent-structure.png','image/png'], '/assets/journal-layered-tee-model.png': ['public/assets/journal-layered-tee-model.png','image/png'], '/assets/editorial-brutalist-monochrome.png': ['public/assets/editorial-brutalist-monochrome.png','image/png'], '/journal-presets.js': ['public/journal-presets.js', 'text/javascript'], '/assets/jacket-model-01.png': ['public/assets/jacket-model-01.png', 'image/png'], '/assets/denim-model-01.png': ['public/assets/denim-model-01.png', 'image/png'], '/assets/clothes-ice-washed-graphic-layered-tee-blue.png': ['public/assets/clothes-ice-washed-graphic-layered-tee-blue.png', 'image/png'], '/homepage-admin.js': ['public/homepage-admin.js', 'text/javascript'], '/admin': ['legacy/admin.html', 'text/html'], '/admin.js': ['public/admin.js', 'text/javascript'], '/admin.css': ['public/admin.css', 'text/css'], '/assets/products.png': ['public/assets/products.png', 'image/png'], '/assets/campaign.png': ['public/assets/campaign.png', 'image/png'], '/assets/campaign-wide.png': ['public/assets/campaign-wide.png', 'image/png'] };
+      for(const image of Object.values(generatedModels))files[image]=['public'+image,'image/png'];
+      for(const product of withBundledModelPhotos(catalogueFixture()).products)for(const image of [product.image,product.modelImage])if(image?.startsWith('/assets/'))files[image]=['public'+image,image.endsWith('.svg')?'image/svg+xml':'image/png'];
       if (request.method === 'GET' && files[pathname]) {
         const [filename, type] = files[pathname]; response.writeHead(200, { 'Content-Type': type }); response.end(fs.readFileSync(path.join(root, filename))); return;
       }
@@ -220,6 +258,27 @@ function stored() { return JSON.parse(row.data); }
     await page.reload(); await page.locator('#editor').waitFor({ state: 'visible' });
     assert.equal(await page.locator('.model-photo-preview').count(), 0);
     assert.equal(saveCount, 3);
+  });
+  await check('replacing a generated model with an uploaded photo saves photo provenance and survives reload', async () => {
+    const source=catalogueFixture(),index=source.products.findIndex(product=>product.id==='destroyed-knit-sweater-black');
+    row={data:JSON.stringify(source),revision:0,updated_at:'2026-10-16T00:00:00Z'};await page.reload();await page.locator('#editor').waitFor({state:'visible'});
+    const card=page.locator('.product-card').nth(index);assert.equal(await card.locator('.model-photo-preview').getAttribute('src'),generatedModels['destroyed-knit-sweater-black']);
+    assert.equal(await card.locator('[data-key="modelImageKind"]').inputValue(),'generated');
+    await page.locator('[data-upload="model"][data-index="'+index+'"]').setInputFiles(photo);
+    await page.waitForFunction(index=>document.querySelectorAll('.product-card')[index].querySelector('.model-photo-preview')?.getAttribute('src').startsWith('/media/'),index);
+    await page.locator('#save').click();await page.locator('#save-state').filter({hasText:'저장 완료'}).waitFor();
+    const saved=stored().products[index];assert.equal(saved.modelImageKind,'photo');assert.match(saved.modelImage,/^\/media\/[a-f0-9-]+\.png$/);assert.equal(saved.image,source.products[index].image);
+    await page.reload();await page.locator('#editor').waitFor({state:'visible'});assert.equal(await card.locator('.model-photo-preview').getAttribute('src'),saved.modelImage);assert.equal(await card.locator('[data-key="modelImageKind"]').inputValue(),'photo');
+    const published=(await (await publicRoute.GET()).json()).content.products.find(product=>product.id===saved.id);assert.equal(published.modelImage,saved.modelImage);assert.equal(published.modelImageKind,'photo');
+  });
+  await check('replacing the base garment removes its generated outfit and persists explicit suppression instead of showing the wrong garment', async () => {
+    const source=catalogueFixture(),index=source.products.findIndex(product=>product.id==='destroyed-knit-sweater-black');
+    row={data:JSON.stringify(source),revision:0,updated_at:'2026-10-16T00:00:00Z'};await page.reload();await page.locator('#editor').waitFor({state:'visible'});
+    const card=page.locator('.product-card').nth(index);await page.locator('[data-upload="product"][data-index="'+index+'"]').setInputFiles(photo);
+    await card.locator('.model-photo-preview').waitFor({state:'detached'});await page.locator('#save').click();await page.locator('#save-state').filter({hasText:'저장 완료'}).waitFor();
+    const saved=stored().products[index];assert.match(saved.image,/^\/media\/[a-f0-9-]+\.png$/);assert.equal(saved.modelImage,null);assert.equal(Object.hasOwn(saved,'modelImageKind'),false);assert.equal(Object.hasOwn(saved,'modelFocus'),false);
+    await page.reload();await page.locator('#editor').waitFor({state:'visible'});assert.equal(await card.locator('.model-photo-preview').count(),0);assert.equal(await card.locator('[data-key="modelFocus"]').isDisabled(),true);
+    const published=(await (await publicRoute.GET()).json()).content.products.find(product=>product.id===saved.id);assert.equal(published.modelImage,null);assert.equal(Object.hasOwn(published,'modelImageKind'),false);
   });
   await check('editor remains within desktop and 320px mobile viewports without external requests or browser errors', async () => {
     for (const width of [1440, 320]) {

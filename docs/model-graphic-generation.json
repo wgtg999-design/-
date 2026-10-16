@@ -1,0 +1,50 @@
+{
+  "generated_at_utc": "2026-10-16T02:50:34.629603+00:00",
+  "generator": "image_gen.imagegen",
+  "method": "reference-guided image edit / virtual garment wearing simulation",
+  "purpose": "Missing wearing-view imagery for product photo switcher",
+  "disclosure": "AI-generated wearing illustration, not a photograph of physical stock or evidence of actual fit.",
+  "framing": "Portrait 4:5, head to mid-thigh, light grey studio, plain black wide trousers",
+  "outputs": [
+    {
+      "source": {
+        "path": "public/assets/clothes-vintage-washed-gothic-crop-long-sleeve-charcoal.png",
+        "sha256": "46968e106fee301287ba25bfb817f459a45f94e36c5dfe335d177a6a17e68132",
+        "bytes": 1992320,
+        "width": 1122,
+        "height": 1402
+      },
+      "output": {
+        "path": "public/assets/model-gothic-crop-charcoal.png",
+        "sha256": "74926224d009fdd3dd68bd4aaeab9d6ee2c6533c2ac824130373f4d9b4fcd308",
+        "bytes": 2080274,
+        "width": 1122,
+        "height": 1402
+      },
+      "generated_original": "/workspace/generated_images/exec-e6535486-517b-477c-93af-8d23c14bda77.png",
+      "subject": "adult female model, charcoal cropped long-sleeve top",
+      "reference_preservation": "Source garment supplied as image_gen referenced_image_paths; requested matching color, cut, fabric and graphic placement. Generated wearing simulation may differ in small garment and graphic details.",
+      "visual_review": "Viewed reference and generated output. Light grey studio, adult model, complete shirt visible, no extra accessories or logos."
+    },
+    {
+      "source": {
+        "path": "public/assets/clothes-thorn-graphic-layered-tee-burgundy.png",
+        "sha256": "f18afad65eb6b6831c3a16886bef3028bf83b50c588093c3919e2770289cc089",
+        "bytes": 2004257,
+        "width": 1122,
+        "height": 1402
+      },
+      "output": {
+        "path": "public/assets/model-thorn-layered-burgundy.png",
+        "sha256": "be5074ac0eab9aa5a5a99e03d24410ebd74c35ce09b3aa6cf915e2121d791636",
+        "bytes": 2018342,
+        "width": 1122,
+        "height": 1402
+      },
+      "generated_original": "/workspace/generated_images/exec-e01c10bd-db67-4183-8742-5efc056b07e7.png",
+      "subject": "adult male model, burgundy and grey layered long-sleeve tee",
+      "reference_preservation": "Source garment supplied as image_gen referenced_image_paths; requested matching color, cut, fabric and graphic placement. Generated wearing simulation may differ in small garment and graphic details.",
+      "visual_review": "Viewed reference and generated output. Light grey studio, adult model, complete shirt visible, no extra accessories or logos."
+    }
+  ]
+}

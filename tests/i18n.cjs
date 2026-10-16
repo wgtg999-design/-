@@ -97,7 +97,10 @@ assert.equal(blockedStorage.I.getLanguage(), 'ko');
 assert.equal(blockedStorage.I.setLanguage('zh-CN'), true); assert.equal(blockedStorage.I.getLanguage(), 'zh-CN');
 
 assert.equal(b.I.formatCurrency(128000), '₩128,000', 'Language selection must not invent currency conversion');
-assert.equal(b.I.catalogValue({name: 'Original', translations: {'zh-TW': {name: '原始'}}}, 'name'), '原始');
+// Catalogue names intentionally retain the operator's original English name;
+// descriptions and interface copy still follow the selected language.
+assert.equal(b.I.catalogValue({name: 'Original', translations: {'zh-TW': {name: '原始'}}}, 'name'), 'Original');
+assert.equal(b.I.catalogValue({description: 'Original', translations: {'zh-TW': {description: '原始'}}}, 'description'), '原始');
 assert.equal(b.I.catalogValue({name: 'Original', translations: {'zh-TW': {name: ' '}}}, 'name'), 'Original');
 assert.equal(b.I.catalogValue({terms: 'Operator legal text'}, 'terms'), 'Operator legal text');
 assert.equal(b.I.translateError('로그인이 필요합니다.'), '請先登入。');

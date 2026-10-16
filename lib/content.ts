@@ -22,24 +22,33 @@ export const contentSchema=z.object({
  brand:z.string().trim().min(1).max(35),notice:z.string().max(120),aboutTitle:z.string().max(100),aboutText:z.string().max(500),
  socialLinks:socialLinks.optional(),translations:brandTranslations.optional(),
  homepage:homepage.optional(),heroImages:z.array(localImage).min(1).max(5),journalImage:localImage,
- products:z.array(z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,60}$/),name:z.string().trim().min(1).max(100),color:z.string().max(50),category:z.enum(['OUTER','BOTTOMS','TOPS','ACC','KNITWEAR','HOODIES','TSHIRT','SKIRTS']),price:z.number().int().min(0).max(100000000),description:z.string().max(2000),sizes:z.array(z.string().trim().min(1).max(20)).max(12),image:localImage,crop:z.enum(['','right','bottom','bottom right']),modelImage:localImage.nullable().optional(),modelFocus:z.enum(['upper','lower','center']).optional(),visible:z.boolean(),featured:z.boolean().optional(),sizeGuide:z.string().max(4000).optional(),translations:productTranslations.optional()})).max(100)
+ products:z.array(z.object({id:z.string().regex(/^[a-zA-Z0-9_-]{1,60}$/),name:z.string().trim().min(1).max(100),color:z.string().max(50),category:z.enum(['OUTER','BOTTOMS','TOPS','ACC','KNITWEAR','HOODIES','TSHIRT','SKIRTS']),price:z.number().int().min(0).max(100000000),description:z.string().max(2000),sizes:z.array(z.string().trim().min(1).max(20)).max(12),image:localImage,crop:z.enum(['','right','bottom','bottom right']),modelImage:localImage.nullable().optional(),modelFocus:z.enum(['upper','lower','center']).optional(),modelImageKind:z.enum(['photo','generated']).optional(),visible:z.boolean(),featured:z.boolean().optional(),sizeGuide:z.string().max(4000).optional(),translations:productTranslations.optional()})).max(100)
 }).refine(v=>v.products.every(p=>p.image!=='/assets/product-image-pending.svg'||!p.visible),'기본 사진이 없는 상품은 공개할 수 없습니다.').refine(v=>new Set(v.products.map(p=>p.id)).size===v.products.length,'상품 ID가 중복되었습니다.').refine(v=>!v.homepage||v.homepage.banners.length===v.heroImages.length,'배너 설정 개수를 확인하세요.').refine(v=>!v.homepage||[v.homepage.slider01,v.homepage.slider02??[]].every(ids=>new Set(ids).size===ids.length&&ids.every(id=>v.products.some(p=>p.id===id))),'슬라이더는 중복 없이 등록된 상품만 지정하세요.');
 export type Content=z.infer<typeof contentSchema>;
 // Numbered original photographs supplied by the operator. The ID and original
 // sample packshot must both match; sorting never changes the photo assignment.
-const bundledModelPhotos:Record<string,{crop:string;image:string;focus:'upper'|'lower'}>={
+const bundledModelPhotos:Record<string,{crop:string;image:string;focus:'upper'|'lower';source?:string;kind?:'generated'}>={
  jacket:{crop:'',image:'/assets/jacket-model-01.png',focus:'upper'},
  shell:{crop:'right',image:'/assets/shell-model-01.png',focus:'upper'},
  denim:{crop:'bottom',image:'/assets/denim-model-01.png',focus:'lower'},
- trousers:{crop:'bottom right',image:'/assets/trousers-model-01.png',focus:'lower'}
+ trousers:{crop:'bottom right',image:'/assets/trousers-model-01.png',focus:'lower'},
+ 'destroyed-knit-sweater-black':{crop:'',source:'/assets/clothes-destroyed-knit-sweater-black.png',image:'/assets/model-destroyed-knit-black.png',focus:'upper',kind:'generated'},
+ 'distressed-off-shoulder-knit-olive-grey':{crop:'',source:'/assets/clothes-distressed-off-shoulder-knit-olive-grey.png',image:'/assets/model-off-shoulder-knit-olive.png',focus:'upper',kind:'generated'},
+ 'heavyweight-oversized-zip-hoodie-black':{crop:'',source:'/assets/clothes-heavyweight-oversized-zip-hoodie-black.png',image:'/assets/model-oversized-hoodie-black.png',focus:'upper',kind:'generated'},
+ 'slim-cropped-zip-hoodie-heather-grey':{crop:'',source:'/assets/clothes-slim-cropped-zip-hoodie-heather-grey.png',image:'/assets/model-cropped-hoodie-grey.png',focus:'upper',kind:'generated'},
+ 'star-stitch-ribbed-tank-top-black':{crop:'',source:'/assets/clothes-star-stitch-ribbed-tank-top-black.png',image:'/assets/model-star-tank-black.png',focus:'upper',kind:'generated'},
+ 'ice-washed-graphic-layered-tee-blue':{crop:'',source:'/assets/clothes-ice-washed-graphic-layered-tee-blue.png',image:'/assets/journal-layered-tee-model.png',focus:'upper',kind:'generated'},
+ 'vintage-washed-gothic-crop-long-sleeve-charcoal':{crop:'',source:'/assets/clothes-vintage-washed-gothic-crop-long-sleeve-charcoal.png',image:'/assets/model-gothic-crop-charcoal.png',focus:'upper',kind:'generated'},
+ 'thorn-graphic-layered-tee-burgundy':{crop:'',source:'/assets/clothes-thorn-graphic-layered-tee-burgundy.png',image:'/assets/model-thorn-layered-burgundy.png',focus:'upper',kind:'generated'},
+ 'vintage-washed-utility-jacket-brown':{crop:'',source:'/assets/clothes-vintage-washed-utility-jacket-brown.png',image:'/assets/model-utility-jacket-brown.png',focus:'upper',kind:'generated'},
 };
 export function withBundledModelPhotos(content:Content):Content{
  return {...content,products:content.products.map(product=>{
   const preset=Object.hasOwn(bundledModelPhotos,product.id)?bundledModelPhotos[product.id]:undefined;
   // undefined inherits a supplied photo, null records an administrator's
   // explicit removal, and a saved URL always takes precedence. No DB writes.
-  if(!preset||product.modelImage!==undefined||product.image!=='/assets/products.png'||product.crop!==preset.crop)return product;
-  return {...product,modelImage:preset.image,modelFocus:product.modelFocus??preset.focus};
+  if(!preset||product.modelImage!==undefined||product.image!==(preset.source||'/assets/products.png')||product.crop!==preset.crop)return product;
+  return {...product,modelImage:preset.image,modelFocus:product.modelFocus??preset.focus,...(preset.kind?{modelImageKind:preset.kind}:{})};
  })};
 }
 export const defaults:Content={brand:'YOUR LABEL',notice:'COLLECTION 001 — INDEPENDENT UNIFORM',aboutTitle:'남들과 다른 결. 방향은 분명하게.',aboutText:'일상의 실루엣을 다시 바라보는 독립 스트릿웨어.',heroImages:['/assets/campaign-wide.png','/assets/campaign.png'],journalImage:'/assets/campaign.png',products:[

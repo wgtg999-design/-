@@ -1,0 +1,58 @@
+{
+  "created": "2026-10-16",
+  "method": "image_gen edits with referenced_image_paths; originals retained unchanged",
+  "provenance": "AI-generated illustrative on-model images derived from supplied garment packshots. Not authentic photographs of physical stock. Garment likeness inspected visually; original packshots remain product authority.",
+  "images": [
+    {
+      "source": {
+        "path": "public/assets/clothes-destroyed-knit-sweater-black.png",
+        "sha256": "7a410c24f515c0f19ed561269022d53d56284d06ff28d5e3a11ad09db036317c",
+        "width": 1122,
+        "height": 1402,
+        "bytes": 2386537
+      },
+      "output": {
+        "path": "public/assets/model-destroyed-knit-black.png",
+        "sha256": "662f7db712c1219442ca012430786b3785f10221a8bec9e4fa060423b7223c33",
+        "width": 1122,
+        "height": 1402,
+        "bytes": 2284664
+      },
+      "review": "Visually reviewed for corresponding garment, color, cut, distressed knit or pocket/closure details; neutral studio portrait."
+    },
+    {
+      "source": {
+        "path": "public/assets/clothes-distressed-off-shoulder-knit-olive-grey.png",
+        "sha256": "8a6c9babf7e358394e9ae612fcb1bb4ab7d6460c9ef16c4ca24c5046bc999bc9",
+        "width": 1122,
+        "height": 1402,
+        "bytes": 2846628
+      },
+      "output": {
+        "path": "public/assets/model-off-shoulder-knit-olive.png",
+        "sha256": "6c1f7ff64204e0b0181c5c6e0624a3a709fdcf215d07cc506b2920ab0647da08",
+        "width": 1122,
+        "height": 1402,
+        "bytes": 2382774
+      },
+      "review": "Visually reviewed for corresponding garment, color, cut, distressed knit or pocket/closure details; neutral studio portrait."
+    },
+    {
+      "source": {
+        "path": "public/assets/clothes-vintage-washed-utility-jacket-brown.png",
+        "sha256": "32e3102ee7595cbda2d0e14406bfe1509127df1fca20a6d0a07463d38a2ec969",
+        "width": 1122,
+        "height": 1402,
+        "bytes": 2310851
+      },
+      "output": {
+        "path": "public/assets/model-utility-jacket-brown.png",
+        "sha256": "973e32971afa1723c041f4273b0bfe79ead54734fc7e012e683acda5f12ccd3f",
+        "width": 1122,
+        "height": 1402,
+        "bytes": 2200417
+      },
+      "review": "Visually reviewed for corresponding garment, color, cut, distressed knit or pocket/closure details; neutral studio portrait."
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-10-16",
+  "tool": "image_gen.imagegen",
+  "purpose": "AI-generated illustrative model try-on photographs based on the exact product reference images; not authentic photographs of physical stock.",
+  "authorization": "User authorized new fashion photographs matching the shop mood; follow-up requested product-to-model image switching for all garments.",
+  "method": "Each garment source was viewed before editing, supplied as the first referenced image. jacket-model-01.png was used only for photographic lighting/composition reference. Outputs were visually inspected, copied unchanged from the generation output PNG files.",
+  "styleReference": {
+    "path": "public/assets/jacket-model-01.png",
+    "sha256": "4c255446a7183e57f6746133757d8df10f39af179d0a846a0854ec5ec9e2dbc4",
+    "width": 1122,
+    "height": 1402,
+    "bytes": 2469178
+  },
+  "images": [
+    {
+      "productSlug": "heavyweight-oversized-zip-hoodie-black",
+      "source": {
+        "path": "public/assets/clothes-heavyweight-oversized-zip-hoodie-black.png",
+        "sha256": "658cc7348a12714e72257018184d244b1d23e2814d97f2a979666df3d593dced",
+        "width": 1122,
+        "height": 1402,
+        "bytes": 1738861
+      },
+      "output": {
+        "path": "public/assets/model-oversized-hoodie-black.png",
+        "sha256": "31de0b24ea9dd84813b9114c547d99a8834b91ad73ab77ea022333e23682d3c3",
+        "width": 1122,
+        "height": 1402,
+        "bytes": 1969238
+      },
+      "brief": "adult male 25+, black loose trousers; exact oversized black zip hoodie",
+      "inspection": "Garment cut, color, ribbing, drawstrings/zip or star stitching visually checked against source. Generative illustration may differ from real-world fit."
+    },
+    {
+      "productSlug": "slim-cropped-zip-hoodie-heather-grey",
+      "source": {
+        "path": "public/assets/clothes-slim-cropped-zip-hoodie-heather-grey.png",
+        "sha256": "3b3dd5dda1ceea87daf90ef701024eb9e05606da31ecdc5fb6a648201d71346a",
+        "width": 1122,
+        "height": 1402,
+        "bytes": 1949562
+      },
+      "output": {
+        "path": "public/assets/model-cropped-hoodie-grey.png",
+        "sha256": "8a9cd281957c1069e474e34e64652e55838a00b041f2eb5cf3fda4741faa0368",
+        "width": 1122,
+        "height": 1402,
+        "bytes": 2039601
+      },
+      "brief": "adult female 25+, black trousers and black tank; exact grey cropped zip hoodie",
+      "inspection": "Garment cut, color, ribbing, drawstrings/zip or star stitching visually checked against source. Generative illustration may differ from real-world fit."
+    },
+    {
+      "productSlug": "star-stitch-ribbed-tank-top-black",
+      "source": {
+        "path": "public/assets/clothes-star-stitch-ribbed-tank-top-black.png",
+        "sha256": "46f94841cc52011987264b93baf8c7c92b9cb2c73e7e9e0b1b095c8864044f21",
+        "width": 1122,
+        "height": 1402,
+        "bytes": 1552867
+      },
+      "output": {
+        "path": "public/assets/model-star-tank-black.png",
+        "sha256": "0cdf3a9dfe0b6cf29e6994810fd3fff2d44e70bfcfdcff39855a58a4ddba515c",
+        "width": 1122,
+        "height": 1402,
+        "bytes": 1850041
+      },
+      "brief": "adult female 25+, black trousers; black ribbed tank with star and vertical stitch",
+      "inspection": "Garment cut, color, ribbing, drawstrings/zip or star stitching visually checked against source. Generative illustration may differ from real-world fit."
+    }
+  ]
+}

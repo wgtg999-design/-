@@ -1,0 +1,13 @@
+# Complete wearing views for the published catalogue
+
+The reported inconsistency was missing data: ten of nineteen published products had a model image, while the nine previously imported tops did not. Card hover and photo buttons already worked when a matching second photograph existed.
+
+Nine source-matched wearing previews now fill only undefined modelImage fields. Eight new generated images reference each original packshot; the matching layered-tee journal image is reused as an explicitly labelled AI wearing preview. Source/output hashes and generation provenance are recorded in model-knit-jacket-generation.json, model-hoodie-tank-generation.json, model-graphic-generation.json and journal-layered-tee-model.json. Original packshots remain unchanged. No product, stock, price, order or membership record is fabricated or overwritten.
+
+lib/content.ts checks the exact stable product ID, original packshot path and crop before applying a fallback. Existing model images and explicit null removals take precedence. Reads do not write the DB or increment its revision. Generated previews carry modelImageKind=generated, a visible label while selected, an accessible image description and a detail-page note in all four supported languages. They illustrate the clothing and do not establish actual physical fit or fabric dimensions.
+
+The administrator can identify uploaded photographs versus AI previews. Replacing a generated model with an upload resets its kind to photo; replacing that garment's base photo removes its generated outfit and records explicit suppression, preventing the previous garment from reappearing. The existing guard, same-origin and revision checks remain in force.
+
+Rollback code baseline: origin/backup/before-model-completion-20261016 at 4cc99159b17c927b4a0aa29a4773747dc8d61672. There is no DB migration. As with previous appearance changes, saved image references and code/assets must be considered together if reverting after a later administrator save.
+
+Validation uses isolated memory SQL and local Chromium, including all nineteen public cards, desktop hover/button selection, nineteen detail routes, mobile buttons, missing-photo fallback, generated labels, administrator replace/remove/save/reload and no-database-write fallback rules. Original security and catalogue-import checks remain relevant. The existing i18n test's stale expectation that product names translate was corrected to the established original-name policy, while translated descriptions and all interface-language checks remain enforced; the pre-change source reproduced the same stale failure.
