@@ -298,6 +298,18 @@ function stored() { return JSON.parse(row.data); }
     await page.reload();await page.locator('#editor').waitFor({state:'visible'});assert.equal(await card.locator('.model-photo-preview').count(),0);assert.equal(await card.locator('[data-key="modelFocus"]').isDisabled(),true);
     const published=(await (await publicRoute.GET()).json()).content.products.find(product=>product.id===saved.id);assert.equal(published.modelImage,null);assert.equal(Object.hasOwn(published,'modelImageKind'),false);
   });
+  await check('try-on-only garment photo, category and visibility save/reload without replacing base or model photos', async () => {
+    const before=withBundledModelPhotos(stored()).products[0];
+    await page.locator('[data-upload="tryon"][data-index="0"]').setInputFiles(photo);
+    await page.locator('.tryon-garment-preview').first().waitFor();
+    await page.locator('[data-key="tryOnCategory"][data-product="0"]').selectOption('bottoms');
+    await page.locator('[data-key="tryOnEnabled"][data-product="0"]').uncheck();
+    await page.locator('#save').click();await page.locator('#save-state').filter({hasText:'저장 완료'}).waitFor();
+    const saved=stored().products[0];assert.match(saved.tryOnImage,/^\/media\/[a-f0-9-]+\.png$/);assert.equal(saved.tryOnCategory,'bottoms');assert.equal(saved.tryOnEnabled,false);assert.equal(saved.image,before.image);assert.equal(saved.modelImage,before.modelImage);
+    await page.reload();await page.locator('#editor').waitFor({state:'visible'});assert.equal(await page.locator('[data-key="tryOnCategory"][data-product="0"]').inputValue(),'bottoms');assert.equal(await page.locator('[data-key="tryOnEnabled"][data-product="0"]').isChecked(),false);assert.equal(await page.locator('.tryon-garment-preview').first().getAttribute('src'),saved.tryOnImage);
+    const invalid=structuredClone(stored());invalid.products[0].tryOnImage='https://evil.test/photo.jpg';assert.equal(contentSchema.safeParse(invalid).success,false);
+    await page.locator('[data-action="tryon-remove"][data-index="0"]').click();await page.locator('[data-key="tryOnCategory"][data-product="0"]').selectOption('');await page.locator('#save').click();await page.locator('#save-state').filter({hasText:'저장 완료'}).waitFor();assert.equal(stored().products[0].tryOnImage,null);assert.equal(stored().products[0].tryOnCategory,undefined);assert.equal(stored().products[0].image,before.image);
+  });
   await check('editor remains within desktop and 320px mobile viewports without external requests or browser errors', async () => {
     for (const width of [1440, 320]) {
       await page.setViewportSize({ width, height: 1000 });

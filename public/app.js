@@ -230,7 +230,7 @@
     target.innerHTML = `<div class="detail-layout">${detailGallery(product)}<div class="detail-copy"><p class="muted">${esc(t('home.collection'))}</p><h2>${esc(label(product,'name'))}</h2><p>${esc(label(product,'color'))}<br>${money(product.price)}</p><p style="white-space:pre-line">${esc(description)}</p>${originalNote ? `<p class="muted">${esc(t('shop.originalText'))}</p>` : ''}<label for="size">${esc(t('product.size'))}</label><select id="size"><option value="">${esc(t('product.chooseSize'))}</option>${product.sizes.map(size => {
       const limit = purchaseLimit(id, size);
       return `<option value="${esc(size)}" ${limit ? '' : 'disabled'} ${size === selectedSize ? 'selected' : ''}>${esc(size)} · ${esc(limit ? t('product.maxQuantity',{count:limit}) : t('product.soldOut'))}</option>`;
-    }).join('')}</select><label for="product-quantity">${esc(t('cart.quantity'))}</label><input id="product-quantity" type="number" min="1" max="99" step="1" value="1"><button class="primary" id="add" type="button">${esc(t('product.addToBag'))}</button><p id="size-error" role="alert"></p><button class="size-guide-toggle" id="size-guide" type="button" aria-expanded="false" aria-controls="size-guide-content">${esc(t('product.sizeGuide'))} +</button><div id="size-guide-content" class="size-guide-content" hidden>${sizeGuide ? `<p style="white-space:pre-line">${esc(sizeGuide)}</p>${I.getLanguage() !== 'ko' && !product.translations?.[I.getLanguage()]?.sizeGuide ? `<p class="muted">${esc(t('shop.originalText'))}</p>` : ''}` : `<p>${esc(t('product.sizeGuideEmpty'))}</p><p>${esc(t('product.measureIntro'))}</p><ul><li>${esc(t('product.measureShoulder'))}</li><li>${esc(t('product.measureChest'))}</li><li>${esc(t('product.measureLength'))}</li></ul><p class="muted">${esc(t('product.measureNote'))}</p>`}</div><button class="save-product" type="button" data-wishlist="${esc(id)}" aria-pressed="${favorites.has(id)}">${esc(t(favorites.has(id) ? 'product.unsave' : 'product.save'))}</button><div class="sizes">${esc(t('product.paymentNote'))}</div></div></div>`;
+    }).join('')}</select><label for="product-quantity">${esc(t('cart.quantity'))}</label><input id="product-quantity" type="number" min="1" max="99" step="1" value="1"><button class="primary" id="add" type="button">${esc(t('product.addToBag'))}</button><button class="ai-tryon-button" type="button" data-tryon="${esc(id)}">AI TRY ON / 내 사진으로 입어 보기</button><p id="size-error" role="alert"></p><button class="size-guide-toggle" id="size-guide" type="button" aria-expanded="false" aria-controls="size-guide-content">${esc(t('product.sizeGuide'))} +</button><div id="size-guide-content" class="size-guide-content" hidden>${sizeGuide ? `<p style="white-space:pre-line">${esc(sizeGuide)}</p>${I.getLanguage() !== 'ko' && !product.translations?.[I.getLanguage()]?.sizeGuide ? `<p class="muted">${esc(t('shop.originalText'))}</p>` : ''}` : `<p>${esc(t('product.sizeGuideEmpty'))}</p><p>${esc(t('product.measureIntro'))}</p><ul><li>${esc(t('product.measureShoulder'))}</li><li>${esc(t('product.measureChest'))}</li><li>${esc(t('product.measureLength'))}</li></ul><p class="muted">${esc(t('product.measureNote'))}</p>`}</div><button class="save-product" type="button" data-wishlist="${esc(id)}" aria-pressed="${favorites.has(id)}">${esc(t(favorites.has(id) ? 'product.unsave' : 'product.save'))}</button><div class="sizes">${esc(t('product.paymentNote'))}</div></div></div>`;
     bindModelPhotos(target);
     $('#size-guide').onclick = () => {
       const expanded = $('#size-guide').getAttribute('aria-expanded') !== 'true';
@@ -252,6 +252,12 @@
       saveCart(); $('#product-dialog').close(); $('#bag-dialog').showModal();
     };
   }
+  window.addEventListener('store:tryon-cart', event => {
+    const id=event.detail?.id;if(!products.some(p=>p.id===id))return;
+    if(pageMode==='product'&&routeProduct===id)renderProduct(id,$('#size')?.value||'',true);
+    else openProduct(id);
+    $('#size')?.focus();
+  });
   function openProduct(id) { currentProduct = id; renderProduct(id); $('#product-dialog').showModal(); }
   function saveCart() { persist(cartKey, cart); renderCart(); }
   function renderCart() {

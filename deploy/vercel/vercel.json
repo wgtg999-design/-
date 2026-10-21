@@ -3,5 +3,11 @@
   "framework": "nextjs",
   "buildCommand": "node scripts/provision.mjs && pnpm run build",
   "installCommand": "pnpm install --frozen-lockfile --prod=false",
-  "outputDirectory": ".next"
+  "outputDirectory": ".next",
+  "crons": [
+    {
+      "path": "/api/internal/try-on-cleanup",
+      "schedule": "0 0 * * *"
+    }
+  ]
 }

@@ -1,0 +1,26 @@
+'use client';
+import { useEffect, useState } from 'react';
+import '../../try-on/try-on.css';
+type Settings={enabled:boolean;allowGuests:boolean;perUserDaily:number;guestDaily:number;dailyLimit:number;dailyBudgetCents:number};
+type Usage={attempts:number;completed:number;failed:number;unknown:number;credits:number};
+type Data={initialized:boolean;configured:boolean;settings:Settings;revision:number;day?:string;usage?:Usage;history?:Array<Usage&{day:string}>;creditMicroUsd?:number};
+const labels:{key:keyof Settings;label:string;min:number;max:number}[]=[{key:'perUserDaily',label:'회원 1명당 일일 요청 한도',min:1,max:20},{key:'guestDaily',label:'비회원 브라우저당 일일 요청 한도',min:1,max:3},{key:'dailyLimit',label:'전체 일일 요청 한도',min:1,max:1000},{key:'dailyBudgetCents',label:'전체 일일 예산 (미국 센트 · 150 = $1.50)',min:8,max:10000}];
+export default function TryOnAdmin(){
+ const [data,setData]=useState<Data|null>(null),[busy,setBusy]=useState(false),[message,setMessage]=useState('설정을 확인하고 있습니다.');
+ async function call(method='GET',body?:unknown){const response=await fetch('/api/admin/try-on',{method,cache:'no-store',...(body?{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});const value=await response.json();if(!response.ok)throw Error(value.error||'처리에 실패했습니다.');return value;}
+ async function load(){setBusy(true);try{setData(await call());setMessage('설정을 불러왔습니다.');}catch(e){setMessage(e instanceof Error?e.message:'연결 실패');}finally{setBusy(false);}}
+ useEffect(()=>{void load();},[]);
+ async function save(initialize=false){setBusy(true);try{await call('PUT',initialize?{action:'initialize'}:{revision:data?.revision,settings:data?.settings});await load();setMessage(initialize?'가상 피팅 전용 저장소를 준비했습니다. 기본 상태는 비활성화입니다.':'설정을 저장했습니다.');}catch(e){setMessage(e instanceof Error?e.message:'저장 실패');}finally{setBusy(false);}}
+ function field(key:keyof Settings,value:number|boolean){setData(d=>d?{...d,settings:{...d.settings,[key]:value}}:d);}
+ return <main className="tryon-shell" style={{maxWidth:1000}}><header className="tryon-header"><div><p>OWNER WORKSPACE</p><h1>AI 가상 피팅 관리</h1></div><a href="/admin">홈페이지 관리</a></header><p role="status" aria-live="polite">{message}</p>
+ {data?<><p>서버 환경변수: {data.configured?'등록됨 (실제 유효성은 생성 요청 시 확인)':'미연결 · FASHN_API_KEY / TRYON_SIGNING_SECRET 필요'}</p><p>고객 사진·결과는 저장하지 않습니다. 이 화면에는 비식별 사용량 집계만 표시됩니다.</p>{!data.initialized?<button className="tryon-primary" disabled={busy} onClick={()=>void save(true)}>AI 피팅 전용 저장소 준비</button>:<form onSubmit={e=>{e.preventDefault();void save();}} className="tryon-options">
+ <label className="photo-consent"><input type="checkbox" checked={data.settings.enabled} disabled={busy||!data.configured} onChange={e=>field('enabled',e.target.checked)}/><span>가상 피팅 활성화</span></label>
+ <label className="photo-consent"><input type="checkbox" checked={data.settings.allowGuests} disabled={busy} onChange={e=>field('allowGuests',e.target.checked)}/><span>비회원 사용 허용 (기본 차단)</span></label><p className="stock-note">비회원 한도는 사진이 없는 서명 쿠키로 구분합니다. 쿠키 삭제로 개인 한도를 우회할 수 있으므로 공개 전에는 로그인 필수를 권장합니다. 전체 요청·예산 한도는 유지됩니다.</p>
+ {labels.map(({key,label,min,max})=><label key={key}>{label}<input style={{display:'block',width:'100%',padding:12,marginTop:8}} type="number" min={min} max={max} required step="1" disabled={busy} value={Number(data.settings[key])} onChange={e=>field(key,Number(e.target.value))}/></label>)}
+ <p>예산은 1회당 $0.075를 예약하여 계산합니다. 실패·응답 불명·중도 취소도 당일 요청 및 예산 한도를 사용합니다. FASHN은 실패 생성에 크레딧을 청구하지 않는다고 명시하지만, 중복·불명 요청의 비용 누락을 막기 위해 한도를 돌려주지 않습니다. 실제 청구액·잔액은 FASHN 대시보드에서 확인하세요.</p>
+ <div className="tryon-actions"><button className="tryon-primary" disabled={busy} type="submit">사용량·예산 설정 저장</button><button disabled={busy} type="button" onClick={()=>void load()}>저장된 설정·집계 다시 불러오기</button></div>
+ </form>}
+ {data.usage?<section><h2>오늘 사용량 · {data.day} UTC</h2><p>요청 {data.usage.attempts} / 완료 {data.usage.completed} / 실패 {data.usage.failed} / 진행·불명 {data.usage.unknown}</p><p>예약 예산 ${(data.usage.attempts*0.075).toFixed(3)} / 확인된 사용 {data.usage.credits}크레딧</p></section>:null}
+ {data.history?.length?<section><h2>최근 30일 집계</h2>{data.history.map(row=><p key={row.day}>{row.day} UTC · 요청 {row.attempts} · 완료 {row.completed} · 실패 {row.failed} · 불명 {row.unknown} · 확인된 크레딧 {row.credits}</p>)}</section>:null}
+ <details className="privacy-details"><summary>운영 전 연결·보관 정책 확인</summary><p>기능은 기본 비활성화입니다. 상품별 전용 사진·상의/하의·노출 여부는 기존 상품 관리에서 설정합니다. 전용 사진은 관리자가 등록한 의류 사진이며 고객 사진을 올리는 곳이 아닙니다.</p><p>FASHN API 크레딧은 일반 앱 크레딧과 별도입니다. 요청당 실제 비용, 약관·국외 처리업체와 사진 보관 정책을 확인한 후 운영하세요. 공식 기준 1회 1크레딧, 온디맨드 $0.075, 최소 충전 $7.50 (2026-10-21 확인).</p><p>사진을 DB/R2/디스크에 쓰지 않습니다. FASHN 입력은 처리 완료 시 삭제·최대 1일 정리, Base64 결과는 완료 후 최대 60분, 요청 메타데이터는 자동 삭제되지 않습니다. 창 닫기는 외부 처리 중단·즉시 삭제·환불을 보장하지 않습니다.</p><p>개별 요청 식별자는 10분 후 만료됩니다. 접근 시 정리하며, 매일 인증된 정리 작업이 지연된 식별자를 지웁니다. 이전 날짜의 가명 식별자는 집계로 바꾸며 30일 후 집계를 삭제합니다. CRON_SECRET 및 Vercel Cron 동작을 확인하세요. 사진 원문을 캡처하는 WAF·분석·오류 추적·프록시 설정은 별도로 꺼야 합니다.</p><p><a href="https://app.fashn.ai/api" target="_blank" rel="noreferrer">FASHN API 대시보드</a> · <a href="https://docs.fashn.ai/api-overview/data-retention-privacy" target="_blank" rel="noreferrer">사진 보관 정책</a> · <a href="https://help.fashn.ai/plans-and-pricing/api-pricing" target="_blank" rel="noreferrer">API 비용</a></p></details></>:null}</main>;
+}

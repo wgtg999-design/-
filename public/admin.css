@@ -9,3 +9,5 @@
 #homepage-editor{overflow-wrap:anywhere}#homepage-editor .fields{margin-bottom:20px;min-width:0}#homepage-editor .fields>*{min-width:0}.slider-selection{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}.slider-selection label{flex-direction:row;align-items:center}.slider-selection input{width:auto}#homepage-editor li{margin:10px 0}#catalog .section-head{flex-wrap:wrap}@media(max-width:650px){.slider-selection{grid-template-columns:minmax(0,1fr)}}
 .savebar>div{flex-wrap:wrap}.savebar button{min-width:0;overflow-wrap:anywhere}
 @media(max-width:650px){.savebar button{padding:10px 8px;flex:1 1 90px}#catalog .section-head>button{white-space:normal;max-width:100%}.section-head>div{min-width:0}}
+
+.tryon-photo-editor{margin-top:20px;padding-top:18px;border-top:1px solid #ddd}.tryon-photo-editor label{display:block;margin-top:12px}.tryon-garment-preview{display:block;width:100%;max-height:280px;object-fit:contain;background:#eee}.tryon-photo-editor select{width:100%}

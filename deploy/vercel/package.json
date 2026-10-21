@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22.13.0" },
+  "engines": {
+    "node": ">=22.13.0"
+  },
   "packageManager": "pnpm@11.25.0",
   "scripts": {
     "prepare:source": "node scripts/prepare.mjs",
@@ -23,6 +25,7 @@
     "next": "16.3.4",
     "react": "19.2.6",
     "react-dom": "19.2.6",
+    "sharp": "0.35.4",
     "zod": "3.25.76"
   },
   "devDependencies": {
