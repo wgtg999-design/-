@@ -120,7 +120,7 @@ Vercel 기존 프로젝트의 **Settings → Environment Variables**:
 
 ## 검증 기록
 
-- `node deploy/vercel/tests/tryon.cjs`: 22개 시나리오. 실제 SQLite/이미지 디코더, 동의·형식·MIME·크기, 공개 상품·상의/하의 지정, 관리자·Origin·결과 소유권, 중복·동시 예산 예약, 실패/불명/취소, 비회원 서명, TTL·일별 비식별 집계, 공식 API 형식·Base64 외 결과 거부. 제공업체만 테스트용으로 대체했다. 사진 저장 0, 실제 생성 없음.
+- `node deploy/vercel/tests/tryon.cjs`: 23개 시나리오. 실제 SQLite/이미지 디코더, 동의·형식·MIME·크기, 공개 상품·상의/하의 지정, 관리자·Origin·결과 소유권, 중복·동시 예산 예약, 실패/불명/취소, 비회원 서명, TTL·일별 비식별 집계, 공식 API 형식·Base64 외 결과 거부. 제공업체만 테스트용으로 대체했다. 사진 저장 0, 실제 생성 없음.
 - `TRYON_QA_URL=http://127.0.0.1:3915 node deploy/vercel/tests/tryon-browser.cjs`: 실제 Next production 빌드의 React 화면에 같은 출처의 명시적 테스트 API 응답을 연결했다. 6개 시나리오, PC 1440px/모바일 390px·320px, 마우스/터치/키보드, 동의, 실패, 취소, 창 종료 시 Blob 참조 해제, 새로고침 시 사진 복원 안 됨, 기존 장바구니. 외부 통신 0, 브라우저 오류 0. 실제 AI 품질 검증은 아니다.
 - 기존 회귀 검증: `tests/model-photo-content.cjs` 15개, `tests/commerce-api.cjs`, `tests/admin-security.cjs`, `deploy/vercel/tests/test-commerce-integration.cjs` 32개, `deploy/vercel/tests/auth.cjs` 27개 시나리오.
 - `cd deploy/vercel && NEXT_TELEMETRY_DISABLED=1 pnpm run build`: Next production 빌드/TypeScript 검사.

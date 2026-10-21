@@ -71,7 +71,7 @@ export function createTryOnService(deps:Deps){
    origin(req);const {settings:s}=await available();const a=await actor(req,s.allowGuests);await cleanup();
    if(req.headers.get('x-tryon-consent')!==POLICY_VERSION)fail(400,'외부 AI 사진 처리 안내에 동의해 주세요.');
    const requestKey=req.headers.get('x-request-key')??'';if(!z.string().uuid().safeParse(requestKey).success)fail(400,'요청 식별자가 올바르지 않습니다.');
-   const requestHash=digest('request:'+a.id+':'+requestKey),subjectHash=subject(a,day());
+   const requestHash=digest('request:'+a.id+':'+requestKey);
    const old=await db().prepare('SELECT id,status,cancelled,expires_at FROM store_tryon_jobs WHERE request_key=?').bind(requestHash).first<Job>();
    if(old)return json({id:old.id,status:old.cancelled||old.expires_at<=now()?'expired':old.status},202);
    const id=req.headers.get('x-product-id')??'';const product=(await deps.catalog()).content.products.find(p=>p.id===id&&p.visible);
@@ -85,7 +85,7 @@ export function createTryOnService(deps:Deps){
     garment=await normalizeImage(await deps.garment(product!),undefined,!product!.tryOnImage&&product!.image==='/assets/products.png'?product!.crop:undefined);
     // Atomic reservation: concurrent requests, settings changes, global/user
     // daily limits, budget and concurrency checked by one SQLite statement.
-    const job=randomUUID(),time=now();
+    const job=randomUUID(),time=now(),attemptDay=new Date(time).toISOString().slice(0,10),subjectHash=subject(a,attemptDay);
     const reserved=await db().prepare(`INSERT INTO store_tryon_jobs(id,day,subject,request_key,status,created_at,expires_at) SELECT ?,?,?,?,'submitting',?,? WHERE
      EXISTS(SELECT 1 FROM store_tryon_settings WHERE key='main' AND json_extract(data,'$.enabled')=1 AND (?=0 OR json_extract(data,'$.allowGuests')=1)
       AND (SELECT COUNT(*) FROM store_tryon_jobs WHERE day=?) < json_extract(data,'$.dailyLimit')
@@ -93,7 +93,7 @@ export function createTryOnService(deps:Deps){
       AND (SELECT COUNT(*) FROM store_tryon_jobs WHERE day=? AND subject=?) < CASE WHEN ?=1 THEN json_extract(data,'$.guestDaily') ELSE json_extract(data,'$.perUserDaily') END)
      AND NOT EXISTS(SELECT 1 FROM store_tryon_jobs WHERE subject=? AND expires_at>? AND status IN ('submitting','starting','in_queue','processing','unknown'))
      AND (SELECT COUNT(*) FROM store_tryon_jobs WHERE expires_at>? AND status IN ('submitting','starting','in_queue','processing','unknown'))<4
-     ON CONFLICT DO NOTHING RETURNING id`).bind(job,day(),subjectHash,requestHash,time,time+JOB_TTL,a.guest?1:0,day(),day(),CREDIT_MICRO_USD,day(),subjectHash,a.guest?1:0,subjectHash,time,time).first<{id:string}>();
+     ON CONFLICT DO NOTHING RETURNING id`).bind(job,attemptDay,subjectHash,requestHash,time,time+JOB_TTL,a.guest?1:0,attemptDay,attemptDay,CREDIT_MICRO_USD,attemptDay,subjectHash,a.guest?1:0,subjectHash,time,time).first<{id:string}>();
     if(!reserved){const replay=await db().prepare('SELECT id,status FROM store_tryon_jobs WHERE request_key=?').bind(requestHash).first<Job>();if(replay)return json({id:replay.id,status:replay.status},202);fail(429,'일일 사용량·예산 한도에 도달했거나 이미 진행 중인 피팅이 있습니다. 잠시 후 또는 내일 다시 시도해 주세요.');}
     try{
      if(req.signal.aborted){await db().prepare("UPDATE store_tryon_jobs SET cancelled=1,status='failed',credits=0 WHERE id=?").bind(job).run();fail(499,'요청이 취소되었습니다.');}
